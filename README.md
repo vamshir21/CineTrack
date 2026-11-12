@@ -18,15 +18,17 @@ CineTrack is a local-first desktop media library for browsing a personal collect
 
 ### Home — Continue Watching and Recently Added
 
-![CineTrack Home](docs/screenshots/home.jpg)
+<img width="2560" height="1275" alt="Screenshot From 2026-11-13 01-19-26" src="https://github.com/user-attachments/assets/24739956-11f3-44c1-a154-a9395c52b179" />
+
 
 ### Movies — poster-based collection
 
-![CineTrack Movies](docs/screenshots/movies.jpg)
+<img width="2560" height="1275" alt="Screenshot From 2026-11-13 01-19-37" src="https://github.com/user-attachments/assets/991863e0-63c6-4ef4-9812-965fcb28a648" />
+
 
 ### TV Shows — seasons and episode browser
 
-![CineTrack TV Shows](docs/screenshots/tv-shows.jpg)
+<img width="2560" height="1275" alt="Screenshot From 2026-11-13 01-19-53" src="https://github.com/user-attachments/assets/5b7fde1d-cd26-4f6e-b285-56483b69e333" />
 
 ## Features
 
