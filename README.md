@@ -4,7 +4,29 @@
 
 CineTrack is a local-first desktop media library for browsing a personal collection of movies and TV shows. It provides a cinematic poster-based interface, optional TMDB metadata and artwork, VLC playback, playback progress, and episode-aware Continue Watching.
 
+<p align="center">
+  <a href="https://github.com/vamshir21/CineTrack/archive/refs/heads/main.zip"><strong>⬇ Download latest source ZIP</strong></a>
+  &nbsp; · &nbsp;
+  <a href="https://github.com/vamshir21/CineTrack/releases"><strong>Releases</strong></a>
+  &nbsp; · &nbsp;
+  <a href="https://github.com/vamshir21/CineTrack/issues"><strong>Report a bug</strong></a>
+</p>
+
 > **Project status:** early public release. CineTrack is developed primarily for Ubuntu Linux. The automated suite does not replace manual testing of Qt rendering, VLC hand-off, codecs, or desktop integration.
+
+## Screenshots
+
+### Home — Continue Watching and Recently Added
+
+![CineTrack Home](docs/screenshots/home.jpg)
+
+### Movies — poster-based collection
+
+![CineTrack Movies](docs/screenshots/movies.jpg)
+
+### TV Shows — seasons and episode browser
+
+![CineTrack TV Shows](docs/screenshots/tv-shows.jpg)
 
 ## Features
 
@@ -17,6 +39,14 @@ CineTrack is a local-first desktop media library for browsing a personal collect
 - Optional TMDB metadata, posters, backdrops, and filename-derived title fallback.
 - Local artwork cache, Watchlist, and SQLite database.
 - Explicit remove-from-library and optional permanent local-file deletion confirmation.
+
+## Download
+
+**No Git required.** Download the latest source as a ZIP:
+
+[![Download ZIP](https://img.shields.io/badge/Download-Latest%20ZIP-1f6feb?style=for-the-badge&logo=github)](https://github.com/vamshir21/CineTrack/archive/refs/heads/main.zip)
+
+For versioned releases and release notes, visit [GitHub Releases](https://github.com/vamshir21/CineTrack/releases). GitHub also provides a ZIP and tar.gz source archive for each published tag.
 
 ## Requirements
 
