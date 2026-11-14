@@ -53,36 +53,28 @@ CineTrack is distributed as ready-to-run source archives. Choose your version be
 ### 1. Cinematic Hero Banner & Netflix Rails
 *Full-width dynamic backdrop slideshow with focal positioning, smooth gradient overlays, carousel dots, and responsive horizontal rails.*
 
-![CineTrack 2.0 - Hero Banner & Browse Experience](<img width="2560" height="1329" alt="Screenshot From 2026-11-14 19-04-04" src="https://github.com/user-attachments/assets/4f38542f-f2a4-4d6a-80ac-d5f5d4dcc9ba" />
-)
-<sub>*Image Placeholder 1: Place screenshot at `docs/screenshots/hero_home.png`*</sub>
+<img src="https://github.com/user-attachments/assets/4f38542f-f2a4-4d6a-80ac-d5f5d4dcc9ba" width="100%" alt="CineTrack 2.0 - Hero Banner & Browse Experience" />
 
 <br><br>
 
 ### 2. Netflix-Style Expanded Hover Cards & Top 10 Rail
 *Smooth Framer Motion scale-up positioned directly over the hovered card with boundary collision avoidance, metadata previews, action triggers, and authentic outlined Top 10 numbers.*
 
-![CineTrack 2.0 - Hover Cards & Top 10 Numbered Rail](<img width="2560" height="1440" alt="Screenshot From 2026-11-14 19-04-18" src="https://github.com/user-attachments/assets/1afd20f9-03a0-49c3-ba4d-179724d09c86" />
-)
-<sub>*Image Placeholder 2: Place screenshot at `docs/screenshots/hover_card_top10.png`*</sub>
+<img src="https://github.com/user-attachments/assets/1afd20f9-03a0-49c3-ba4d-179724d09c86" width="100%" alt="CineTrack 2.0 - Hover Cards & Top 10 Numbered Rail" />
 
 <br><br>
 
 ### 3. Native VLC Video Rig & Automatic Up-Next Timer
 *Hardware-accelerated libVLC video engine with real-time scrub bar, audio/subtitle selectors, and a Netflix-style 10-second countdown prompt before the next episode starts.*
 
-![CineTrack 2.0 - VLC Playback Rig & Next Episode Countdown](<img width="609" height="266" alt="Screenshot From 2026-11-14 19-05-00" src="https://github.com/user-attachments/assets/5c8e44de-5f6b-4d8f-951d-3686480e2d70" />
-)
-<sub>*Image Placeholder 3: Place screenshot at `docs/screenshots/player_upnext.png`*</sub>
+<img src="https://github.com/user-attachments/assets/5c8e44de-5f6b-4d8f-951d-3686480e2d70" width="85%" alt="CineTrack 2.0 - VLC Playback Rig & Next Episode Countdown" />
 
 <br><br>
 
 ### 4. Executive Library Dashboard & Storage Management
 *Glassmorphism metric cards displaying total storage in GB, hours watched, title counts, in-library search/sort, and disk-level permanent file deletion.*
 
-![CineTrack 2.0 - Library Stats Dashboard & Storage Management](<img width="2546" height="1288" alt="Screenshot From 2026-11-14 19-05-26" src="https://github.com/user-attachments/assets/65ba90a9-21c8-4c6a-8578-9031e9291cd9" />
-)
-<sub>*Image Placeholder 4: Place screenshot at `docs/screenshots/library_stats.png`*</sub>
+<img src="https://github.com/user-attachments/assets/65ba90a9-21c8-4c6a-8578-9031e9291cd9" width="100%" alt="CineTrack 2.0 - Library Stats Dashboard & Storage Management" />
 
 </div>
 
