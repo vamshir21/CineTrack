@@ -6,6 +6,7 @@ import { watchlistApi } from '../../api/watchlist';
 import type { Movie } from '../../types';
 import { ImageWithFallback } from '../common/ImageWithFallback';
 import { formatYear, formatRuntime } from '../../utils/timeUtils';
+import { extractMediaSpecs } from '../../utils/mediaBadgeUtils';
 import { ProgressBar } from '../cards/ProgressBar';
 import { TMDBMatchModal } from './TMDBMatchModal';
 
@@ -51,6 +52,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const rating = movie.vote_average ? movie.vote_average.toFixed(1) : null;
   const genres = movie.genres?.join(' • ');
   const hasProgress = movie.progress && movie.progress.position > 0 && !movie.progress.completed;
+  const specs = extractMediaSpecs(movie.file_path, movie.runtime || undefined);
 
   return (
     <AnimatePresence>
@@ -147,6 +149,24 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 </span>
               )}
               {genres && <span className="text-neutral-400">{genres}</span>}
+            </div>
+
+            {/* Media Quality & Specs Badges */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="border border-neutral-600 text-neutral-300 text-[10px] px-2 py-0.5 rounded font-mono font-bold tracking-wider">
+                {specs.resolution}
+              </span>
+              {specs.hdr && (
+                <span className="border border-amber-500/80 text-amber-300 text-[10px] px-2 py-0.5 rounded font-mono font-bold tracking-wider">
+                  {specs.hdr}
+                </span>
+              )}
+              <span className="border border-neutral-600 text-neutral-300 text-[10px] px-2 py-0.5 rounded font-mono font-medium">
+                {specs.audio}
+              </span>
+              <span className="bg-neutral-800 border border-neutral-700 text-neutral-400 text-[10px] px-2 py-0.5 rounded font-mono">
+                {specs.container}
+              </span>
             </div>
 
             {hasProgress && movie.progress && (

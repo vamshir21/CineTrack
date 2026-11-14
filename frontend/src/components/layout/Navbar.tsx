@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Search, Settings, Film } from 'lucide-react';
+import { Search, Settings, Film, Shuffle, Keyboard } from 'lucide-react';
 
-export function Navbar() {
+interface NavbarProps {
+  onOpenPlaySomething?: () => void;
+  onOpenShortcuts?: () => void;
+}
+
+export function Navbar({ onOpenPlaySomething, onOpenShortcuts }: NavbarProps = {}) {
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,7 +69,19 @@ export function Navbar() {
       </div>
 
       {/* Right side */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 md:gap-4">
+        {/* Play Something button */}
+        {onOpenPlaySomething && (
+          <button
+            onClick={onOpenPlaySomething}
+            className="flex items-center gap-1.5 bg-[#222]/90 hover:bg-neutral-800 text-neutral-200 hover:text-white border border-neutral-700 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm active:scale-95"
+            title="Play Something (S)"
+          >
+            <Shuffle className="w-3.5 h-3.5 text-netflix" />
+            <span className="hidden sm:inline">Play Something</span>
+          </button>
+        )}
+
         {searchOpen ? (
           <form onSubmit={handleSearch} className="flex items-center">
             <div className="flex items-center bg-black/80 border border-white/50 rounded">
@@ -99,6 +116,17 @@ export function Navbar() {
         >
           <Settings className="w-5 h-5" />
         </NavLink>
+
+        {onOpenShortcuts && (
+          <button
+            onClick={onOpenShortcuts}
+            className="text-neutral-400 hover:text-white transition-colors p-1"
+            title="Keyboard Shortcuts (?)"
+            aria-label="Keyboard Shortcuts"
+          >
+            <Keyboard className="w-5 h-5" />
+          </button>
+        )}
       </div>
     </nav>
   );

@@ -9,6 +9,7 @@ interface ContentRailProps {
   variant?: 'poster' | 'backdrop';
   onItemClick?: (item: MediaItem) => void;
   onPlay?: (item: MediaItem) => void;
+  isTop10?: boolean;
 }
 
 export const ContentRail: React.FC<ContentRailProps> = ({
@@ -17,6 +18,7 @@ export const ContentRail: React.FC<ContentRailProps> = ({
   variant = 'poster',
   onItemClick,
   onPlay,
+  isTop10 = false,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<any>(null);
@@ -154,20 +156,49 @@ export const ContentRail: React.FC<ContentRailProps> = ({
             const isCW = title.toLowerCase().includes('continue');
 
             return (
-              <MediaCard
+              <div
                 key={`${(item as any).media_type || ('file_path' in item ? 'movie' : 'series')}-${item.id}`}
-                item={item}
-                variant={variant}
-                onClick={() => onItemClick?.(item)}
-                onPlay={() => onPlay?.(item)}
-                isControlledHover={true}
-                isHovered={isCardHovered}
-                translateX={translateX}
-                transformOrigin={origin}
-                onHoverStart={() => handleCardMouseEnter(idx)}
-                onHoverEnd={handleCardMouseLeave}
-                isContinueWatching={isCW}
-              />
+                className="flex items-center shrink-0"
+              >
+                {isTop10 && (
+                  <div className="relative shrink-0 -mr-6 sm:-mr-8 select-none pointer-events-none z-0">
+                    <svg
+                      className="w-20 h-44 sm:w-24 sm:h-52 md:w-28 md:h-60"
+                      viewBox="0 0 100 200"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <text
+                        x="50%"
+                        y="60%"
+                        dominantBaseline="middle"
+                        textAnchor="middle"
+                        fontSize={idx === 9 ? '135' : '175'}
+                        fontWeight="900"
+                        stroke="#595959"
+                        strokeWidth="6"
+                        fill="#141414"
+                        className="font-black"
+                      >
+                        {idx + 1}
+                      </text>
+                    </svg>
+                  </div>
+                )}
+                <MediaCard
+                  item={item}
+                  variant={variant}
+                  onClick={() => onItemClick?.(item)}
+                  onPlay={() => onPlay?.(item)}
+                  isControlledHover={true}
+                  isHovered={isCardHovered}
+                  translateX={translateX}
+                  transformOrigin={origin}
+                  onHoverStart={() => handleCardMouseEnter(idx)}
+                  onHoverEnd={handleCardMouseLeave}
+                  isContinueWatching={isCW}
+                />
+              </div>
             );
           })}
         </div>

@@ -49,6 +49,7 @@ results = [
     test("Health check", "/health"),
     test("SPA Root (HTML)", "/"),
     test("Home data", "/api/library/home"),
+    test("Random media item", "/api/library/random"),
     test("Movies list", "/api/library/movies"),
     test("Series list", "/api/library/series"),
     test("Media folders", "/api/scanner/folders"),
@@ -57,6 +58,7 @@ results = [
     test("Watchlist", "/api/watchlist/"),
     test("Search", "/api/search/?q=test"),
     test("Playback status", "/api/playback/status"),
+    test("Playback toggle", "/api/playback/toggle", method="POST"),
     test("Scan status", "/api/scanner/scan/status"),
 ]
 

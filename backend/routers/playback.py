@@ -33,6 +33,16 @@ def resume():
     return playback_service.get_status()
 
 
+@router.post("/toggle")
+def toggle():
+    st = playback_service.get_status()
+    if st.get("paused"):
+        playback_service.resume()
+    elif st.get("playing"):
+        playback_service.pause()
+    return playback_service.get_status()
+
+
 @router.post("/seek")
 def seek(body: SeekRequest):
     playback_service.seek(body.position)

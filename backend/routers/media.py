@@ -239,6 +239,28 @@ def recently_added(db: Session = Depends(get_db)):
     return combined[:20]
 
 
+@router.get("/random")
+def get_random_item(exclude_id: Optional[int] = None, media_type: Optional[str] = None, db: Session = Depends(get_db)):
+    """Fetch a random movie or TV series for Netflix-style 'Play Something' feature."""
+    candidates = []
+    if media_type != "series":
+        q = db.query(Movie)
+        if exclude_id and media_type == "movie":
+            q = q.filter(Movie.id != exclude_id)
+        movies = q.all()
+        candidates.extend([_movie_out(m, db) for m in movies])
+    if media_type != "movie":
+        q = db.query(TVSeries)
+        if exclude_id and media_type == "series":
+            q = q.filter(TVSeries.id != exclude_id)
+        series = q.all()
+        candidates.extend([_series_out(s, db, include_seasons=True) for s in series])
+
+    if not candidates:
+        raise HTTPException(status_code=404, detail="No media available")
+    return random.choice(candidates)
+
+
 @router.get("/episodes/{episode_id}/next")
 def get_next_episode(episode_id: int, db: Session = Depends(get_db)):
     """Fetch next episode in chronological order for this series."""

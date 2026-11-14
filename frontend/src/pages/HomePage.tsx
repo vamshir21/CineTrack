@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { libraryApi } from '../api/library';
 import { playbackApi } from '../api/playback';
@@ -12,6 +13,7 @@ import { isMovie } from '../types';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 
 export const HomePage: React.FC = () => {
+  const { onOpenPlaySomething } = useOutletContext<{ onOpenPlaySomething?: () => void }>() || {};
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [selectedSeries, setSelectedSeries] = useState<TVSeries | null>(null);
   const { setPlayerOpen } = usePlaybackStore();
@@ -95,6 +97,7 @@ export const HomePage: React.FC = () => {
         items={featured || []}
         onPlay={handlePlayMedia}
         onMoreInfo={handleItemClick}
+        onPlaySomething={onOpenPlaySomething}
       />
 
       {/* Content Rails */}
@@ -116,6 +119,18 @@ export const HomePage: React.FC = () => {
             title="Recently Added"
             items={rails.recently_added}
             variant="poster"
+            onItemClick={handleItemClick}
+            onPlay={handlePlayMedia}
+          />
+        )}
+
+        {/* Top 10 Rail */}
+        {rails.popular_movies && rails.popular_movies.length >= 3 && (
+          <ContentRail
+            title="Top 10 in Movies"
+            items={rails.popular_movies.slice(0, 10)}
+            variant="poster"
+            isTop10={true}
             onItemClick={handleItemClick}
             onPlay={handlePlayMedia}
           />

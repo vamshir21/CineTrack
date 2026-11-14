@@ -44,6 +44,12 @@ export const libraryApi = {
     return data;
   },
 
+  getRandomItem: async (excludeId?: number): Promise<Movie | TVSeries> => {
+    const params = excludeId ? { exclude_id: excludeId } : {};
+    const { data } = await client.get('/api/library/random', { params });
+    return data;
+  },
+
   getHome: async (): Promise<HomeData> => {
     const { data } = await client.get('/api/library/home');
     return data;

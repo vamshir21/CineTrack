@@ -238,6 +238,32 @@ class TestPlaybackAndWatchlist(unittest.TestCase):
         self.assertEqual(settings["next_episode_countdown"], "30")
         self.assertEqual(settings["completion_threshold_minutes"], "2")
 
+    def test_random_library_item_api(self):
+        from fastapi.testclient import TestClient
+        from backend.main import app
+        from backend.models import Movie
+        client = TestClient(app)
+        # Add a dummy movie
+        m = Movie(title="RandomTestMovie", file_path="/movies/random.mkv")
+        self.db.add(m)
+        self.db.commit()
+
+        res = client.get("/api/library/random")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("title", data)
+
+        # Cleanup
+        self.db.delete(m)
+        self.db.commit()
+
+    def test_playback_toggle_api(self):
+        from fastapi.testclient import TestClient
+        from backend.main import app
+        client = TestClient(app)
+        res = client.post("/api/playback/toggle")
+        self.assertEqual(res.status_code, 200)
+
 
 if __name__ == "__main__":
     unittest.main()

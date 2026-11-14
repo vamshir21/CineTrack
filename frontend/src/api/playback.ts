@@ -19,6 +19,11 @@ export const playbackApi = {
     await client.post('/api/playback/resume');
   },
 
+  toggle: async (): Promise<PlaybackStatus> => {
+    const { data } = await client.post('/api/playback/toggle');
+    return data;
+  },
+
   stop: async (): Promise<void> => {
     await client.post('/api/playback/stop');
   },

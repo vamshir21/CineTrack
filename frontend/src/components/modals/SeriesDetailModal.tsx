@@ -8,6 +8,7 @@ import type { TVSeries, Episode, Season } from '../../types';
 import { ImageWithFallback } from '../common/ImageWithFallback';
 import { ProgressBar } from '../cards/ProgressBar';
 import { formatYear, formatRuntime } from '../../utils/timeUtils';
+import { extractMediaSpecs } from '../../utils/mediaBadgeUtils';
 import { TMDBMatchModal } from './TMDBMatchModal';
 
 interface SeriesDetailModalProps {
@@ -289,6 +290,11 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
                               <span className="text-xs text-neutral-400 shrink-0 flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
                                 {formatRuntime(ep.runtime)}
+                              </span>
+                            )}
+                            {ep.file_path && (
+                              <span className="border border-neutral-700 text-neutral-400 text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0">
+                                {extractMediaSpecs(ep.file_path).resolution.includes('4K') ? '4K' : 'HD'}
                               </span>
                             )}
                           </div>

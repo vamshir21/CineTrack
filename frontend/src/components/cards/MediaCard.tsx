@@ -9,6 +9,7 @@ import { playbackApi } from '../../api/playback';
 import type { Movie, TVSeries } from '../../types';
 import { isMovie } from '../../types';
 import { formatYear, formatRuntime } from '../../utils/timeUtils';
+import { extractMediaSpecs } from '../../utils/mediaBadgeUtils';
 
 export interface MediaCardProps {
   item: Movie | TVSeries;
@@ -337,8 +338,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({
                   <span className="text-neutral-300">{formatRuntime(movieItem.runtime)}</span>
                 )}
                 <span className="text-[10px] font-bold border border-neutral-600 px-1 rounded text-neutral-300">
-                  HD
+                  {extractMediaSpecs((item as any).file_path).resolution.includes('4K') ? '4K' : 'HD'}
                 </span>
+                {extractMediaSpecs((item as any).file_path).hdr && (
+                  <span className="text-[10px] font-bold border border-amber-500/70 px-1 rounded text-amber-300">
+                    HDR
+                  </span>
+                )}
               </div>
 
               {/* Genres */}

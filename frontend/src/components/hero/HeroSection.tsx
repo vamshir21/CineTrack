@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Info, ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { Play, Info, ChevronLeft, ChevronRight, Star, Shuffle } from 'lucide-react';
 import type { MediaItem } from '../../types';
 import { isMovie } from '../../types';
 import { ImageWithFallback } from '../common/ImageWithFallback';
@@ -10,9 +10,10 @@ interface HeroSectionProps {
   items: MediaItem[];
   onPlay: (item: MediaItem) => void;
   onMoreInfo: (item: MediaItem) => void;
+  onPlaySomething?: () => void;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ items, onPlay, onMoreInfo }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ items, onPlay, onMoreInfo, onPlaySomething }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -134,6 +135,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ items, onPlay, onMoreI
                 <Info className="w-5 h-5" />
                 <span>More Info</span>
               </button>
+              {onPlaySomething && (
+                <button
+                  onClick={onPlaySomething}
+                  className="flex items-center gap-2 bg-neutral-800/80 hover:bg-neutral-700 text-neutral-200 hover:text-white font-semibold px-5 py-2.5 rounded backdrop-blur-sm transition-colors border border-white/10 active:scale-95 text-sm"
+                  title="Surprise Me (Play Something)"
+                >
+                  <Shuffle className="w-4 h-4 text-netflix" />
+                  <span className="hidden sm:inline">Surprise Me</span>
+                </button>
+              )}
             </div>
           </motion.div>
         </AnimatePresence>
