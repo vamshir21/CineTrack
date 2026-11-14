@@ -163,6 +163,89 @@ Open **`http://localhost:8088`** in your browser.
 
 ---
 
+## 🖥️ Running on Windows & macOS
+
+CineTrack is built on a portable **FastAPI + React 19 + VLC** core. While the automated `install.sh` script is tailored for Linux, you can run CineTrack on Windows or macOS with the simple adjustments below:
+
+### 🪟 Windows Setup (PowerShell or CMD)
+
+1. **Install Prerequisites:**
+   * **Python 3.10+**: Download from [python.org](https://www.python.org/downloads/) *(⚠️ Check **"Add python.exe to PATH"** during installation)*.
+   * **Node.js 18+**: Download from [nodejs.org](https://nodejs.org/).
+   * **VLC Media Player (64-bit)**: Download from [videolan.org](https://www.videolan.org/vlc/). *(⚠️ Must match Python's 64-bit architecture)*.
+
+2. **Setup Dependencies (Manual alternative to `install.sh`):**
+   ```powershell
+   # 1. Clone the repository
+   git clone https://github.com/vamshir21/CineTrack.git
+   cd CineTrack
+
+   # 2. Create and activate virtual environment
+   python -m venv venv
+   .\venv\Scripts\activate
+
+   # 3. Install Python dependencies
+   pip install fastapi uvicorn sqlalchemy pydantic python-vlc aiofiles requests python-dotenv httpx websockets
+
+   # 4. Build the frontend
+   cd frontend
+   npm install
+   npm run build
+   cd ..
+   ```
+
+3. **Configure & Launch:**
+   * Copy `.env.example` to `.env` and set your `TMDB_API_KEY`.
+   * Start the server:
+     ```powershell
+     python -m uvicorn backend.main:app --host 127.0.0.1 --port 8088
+     ```
+   * Open **`http://localhost:8088`** in your browser.
+   * *Folder Path Tip:* When adding media folders in Settings, enter standard Windows paths such as `D:\Movies` or `C:\Users\YourName\Videos`.
+
+---
+
+### 🍎 macOS Setup (Terminal)
+
+1. **Install Prerequisites via Homebrew:**
+   ```bash
+   brew install python@3.11 node
+   brew install --cask vlc
+   ```
+
+2. **Setup Dependencies:**
+   ```bash
+   # 1. Clone the repository
+   git clone https://github.com/vamshir21/CineTrack.git
+   cd CineTrack
+
+   # 2. Create virtual environment
+   python3 -m venv venv
+   source venv/bin/activate
+
+   # 3. Install Python dependencies
+   pip install fastapi uvicorn sqlalchemy pydantic python-vlc aiofiles requests python-dotenv httpx websockets
+
+   # 4. Build the frontend
+   cd frontend && npm install && npm run build && cd ..
+   ```
+
+3. **Configure & Launch:**
+   * Copy `.env.example` to `.env` and set your `TMDB_API_KEY`.
+   * If libVLC is not automatically located, export the plugins path:
+     ```bash
+     export VLC_PLUGIN_PATH="/Applications/VLC.app/Contents/MacOS/plugins"
+     ```
+   * Start the server:
+     ```bash
+     python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8088
+     ```
+   * Open **`http://localhost:8088`** in your browser.
+   * *Folder Path Tip:* When adding media folders in Settings, use standard macOS paths such as `/Users/YourName/Movies`.
+
+
+---
+
 ## 🏗️ Architecture & Technology Stack
 
 ```mermaid
