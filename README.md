@@ -1,82 +1,112 @@
-# 🎬 CineTrack 2.0 — Netflix-Quality Desktop Media Center
+<div align="center">
 
-A production-grade, local streaming platform inspired by Netflix for personal movie and TV series collections on Ubuntu Linux. Powered by **React 19 + TypeScript + Tailwind CSS** frontend with a high-performance **FastAPI + SQLite + libVLC** backend.
+  <img src="https://raw.githubusercontent.com/vamshir21/CineTrack/main/frontend/public/favicon.ico" width="84" alt="CineTrack Logo" style="border-radius: 20%;" />
 
-[![Version](https://img.shields.io/badge/version-2.0.0-E50914?style=for-the-badge&logo=netflix)](https://github.com/vamshir21/CineTrack/releases/tag/v2.0.0)
-[![React](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python)](https://python.org/)
-[![VLC](https://img.shields.io/badge/VLC-Media%20Engine-FF8800?style=for-the-badge&logo=vlc-media-player)](https://www.videolan.org/)
+  # CineTrack 2.0
+  ### *The Netflix of Local Media.*
+
+  **A production-grade, privacy-first desktop streaming platform that transforms your offline movie and TV collection into an authentic streaming experience.**
+
+  <p align="center">
+    <a href="https://github.com/vamshir21/CineTrack/releases/tag/v2.0.0"><img src="https://img.shields.io/badge/Release-v2.0.0-E50914?style=for-the-badge&logo=netflix&logoColor=white" alt="Release"></a>
+    <a href="https://github.com/vamshir21/CineTrack/actions"><img src="https://img.shields.io/badge/Tests-20%2F20%20Passing-brightgreen?style=for-the-badge&logo=githubactions&logoColor=white" alt="Tests"></a>
+    <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React"></a>
+    <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"></a>
+    <a href="https://www.videolan.org/"><img src="https://img.shields.io/badge/VLC-libVLC%20Engine-FF8800?style=for-the-badge&logo=vlcmediaplayer&logoColor=white" alt="VLC"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License"></a>
+  </p>
+
+  <p align="center">
+    <a href="#-downloads"><strong>Download</strong></a> •
+    <a href="#-ui-showcase"><strong>UI Showcase</strong></a> •
+    <a href="#-features"><strong>Features</strong></a> •
+    <a href="#-why-cinetrack"><strong>Why CineTrack?</strong></a> •
+    <a href="#-quick-start"><strong>Quick Start</strong></a> •
+    <a href="#-architecture"><strong>Architecture</strong></a> •
+    <a href="#-shortcuts"><strong>Keyboard Shortcuts</strong></a>
+  </p>
+
+</div>
 
 ---
 
-## 📥 Direct Downloads
-
-Choose the version you want to run:
-
-| Version | Highlights | One-Click Download |
-| :--- | :--- | :--- |
-| 🚀 **CineTrack 2.0 (Latest)** | Complete Netflix-style rebuild, VLC playback rig, Top 10 rail, 4K badges, Play Something, Library Stats, Permanent Deletion controls | [**⬇️ Download CineTrack v2.0 (.zip)**](https://github.com/vamshir21/CineTrack/archive/refs/tags/v2.0.0.zip) |
-| 📦 **CineTrack 1.0 (Classic)** | Original legacy desktop release | [**⬇️ Download CineTrack v1.0 (.zip)**](https://github.com/vamshir21/CineTrack/archive/refs/tags/v1.0.0.zip) |
+> [!IMPORTANT]
+> **100% Local & Private:** CineTrack never streams your videos over external servers or requires a third-party account. All media files stay entirely on your computer, decoded with zero-latency hardware acceleration via native libVLC.
 
 ---
 
-## 🖼️ User Interface Showcase
+## 📥 Downloads
 
-<!-- ============================================================ -->
-<!-- SCREENSHOT 1: HERO & HOME EXPERIENCE                         -->
-<!-- ============================================================ -->
+CineTrack is distributed as ready-to-run source archives. Choose your version below:
+
+| Version | Engine & Stack | Key Highlights | Direct Download |
+| :--- | :--- | :--- | :---: |
+| 🚀 **CineTrack 2.0** <br>*(Latest)* | React 19 · FastAPI · libVLC | Complete Netflix-style rebuild, Top 10 rail, 4K badges, Play Something, Library Stats, Permanent Deletion controls | [**⬇️ Download v2.0.0 (.zip)**](https://github.com/vamshir21/CineTrack/archive/refs/tags/v2.0.0.zip) |
+| 📦 **CineTrack 1.0** <br>*(Classic)* | PySide6 / PyQt Desktop Shell | Original legacy release | [**⬇️ Download v1.0.0 (.zip)**](https://github.com/vamshir21/CineTrack/archive/refs/tags/v1.0.0.zip) |
+
+---
+
+## 🖼️ UI Showcase
+
+<div align="center">
+
 ### 1. Cinematic Hero Banner & Netflix Rails
-*Full-width dynamic backdrop slideshow, left/bottom gradient fusions, carousel indicators, and responsive horizontal rails.*
+*Full-width dynamic backdrop slideshow with focal positioning, smooth gradient overlays, carousel dots, and responsive horizontal rails.*
 
-![CineTrack 2.0 - Cinematic Hero Banner & Home Rails](https://raw.githubusercontent.com/vamshir21/CineTrack/main/docs/screenshots/hero_home.png)
-*(Image Placeholder 1: Place your screenshot at `docs/screenshots/hero_home.png`)*
+![CineTrack 2.0 - Hero Banner & Browse Experience](https://raw.githubusercontent.com/vamshir21/CineTrack/main/docs/screenshots/hero_home.png)
+<sub>*Image Placeholder 1: Place screenshot at `docs/screenshots/hero_home.png`*</sub>
 
----
+<br><br>
 
-<!-- ============================================================ -->
-<!-- SCREENSHOT 2: HOVER CARDS & TOP 10 NUMBERED RAIL            -->
-<!-- ============================================================ -->
 ### 2. Netflix-Style Expanded Hover Cards & Top 10 Rail
-*Pixel-perfect viewport-clamped hover expansion with metadata preview, action buttons, progress bars, and authentic Netflix outlined Top 10 ranking numbers.*
+*Smooth Framer Motion scale-up positioned directly over the hovered card with boundary collision avoidance, metadata previews, action triggers, and authentic outlined Top 10 numbers.*
 
-![CineTrack 2.0 - Expanded Hover Cards and Top 10 Rail](https://raw.githubusercontent.com/vamshir21/CineTrack/main/docs/screenshots/hover_card_top10.png)
-*(Image Placeholder 2: Place your screenshot at `docs/screenshots/hover_card_top10.png`)*
+![CineTrack 2.0 - Hover Cards & Top 10 Numbered Rail](https://raw.githubusercontent.com/vamshir21/CineTrack/main/docs/screenshots/hover_card_top10.png)
+<sub>*Image Placeholder 2: Place screenshot at `docs/screenshots/hover_card_top10.png`*</sub>
 
----
+<br><br>
 
-<!-- ============================================================ -->
-<!-- SCREENSHOT 3: NATIVE VLC PLAYBACK & UP-NEXT TIMER           -->
-<!-- ============================================================ -->
-### 3. Integrated Video Player & Automatic Next Episode Timer
-*Native libVLC hardware-accelerated playback with real-time scrub bar, audio/subtitle selectors, and a Netflix-style 10-second countdown prompt before the next episode starts.*
+### 3. Native VLC Video Rig & Automatic Up-Next Timer
+*Hardware-accelerated libVLC video engine with real-time scrub bar, audio/subtitle selectors, and a Netflix-style 10-second countdown prompt before the next episode starts.*
 
 ![CineTrack 2.0 - VLC Playback Rig & Next Episode Countdown](https://raw.githubusercontent.com/vamshir21/CineTrack/main/docs/screenshots/player_upnext.png)
-*(Image Placeholder 3: Place your screenshot at `docs/screenshots/player_upnext.png`)*
+<sub>*Image Placeholder 3: Place screenshot at `docs/screenshots/player_upnext.png`*</sub>
 
----
+<br><br>
 
-<!-- ============================================================ -->
-<!-- SCREENSHOT 4: LIBRARY STATS DASHBOARD & EPISODE MANAGER     -->
-<!-- ============================================================ -->
 ### 4. Executive Library Dashboard & Storage Management
 *Glassmorphism metric cards displaying total storage in GB, hours watched, title counts, in-library search/sort, and disk-level permanent file deletion.*
 
 ![CineTrack 2.0 - Library Stats Dashboard & Storage Management](https://raw.githubusercontent.com/vamshir21/CineTrack/main/docs/screenshots/library_stats.png)
-*(Image Placeholder 4: Place your screenshot at `docs/screenshots/library_stats.png`)*
+<sub>*Image Placeholder 4: Place screenshot at `docs/screenshots/library_stats.png`*</sub>
+
+</div>
 
 ---
 
-## ✨ Features
+## ⚡ Why CineTrack?
 
-### 🍿 Authentic Netflix-Style UI / UX
+| Capability | **CineTrack 2.0** | **Generic Media Players (VLC / MPV)** | **Heavy Media Servers (Plex / Jellyfin)** |
+| :--- | :---: | :---: | :---: |
+| **Streaming Platform UX** | **Netflix-Quality** | Basic File Player | Generic Web UI |
+| **Playback Latency** | **Instant (Zero Transcode)** | Instant | High (Server Transcoding) |
+| **Privacy & Accounts** | **100% Offline / No Account** | 100% Offline | Account & Cloud Dependencies |
+| **Native Playback Engine** | **libVLC Hardware Acceleration** | Direct Player | Browser Video / Transcoded HLS |
+| **Automatic Next Episode** | **Yes (10s Countdown Timer)** | Manual / Playlist | Yes |
+| **Disk Storage Management** | **In-App Permanent Deletion** | Manual File Manager | Complex Permissions |
+| **Resource Usage** | **Ultra-Lightweight** | Lightweight | Heavy Background Daemon |
+
+---
+
+## ✨ Core Features
+
+### 🎬 Authentic Streaming Experience
 * **Cinematic Hero Carousel:** High-resolution backdrop rotation, focal positioning, gradient vignettes, and one-click playback.
 * **Expanded Hover Cards:** Smooth Framer Motion scale-up positioned directly over the hovered card with boundary collision avoidance (never opens off-screen or in the window center).
 * **Top 10 Numbered Rail:** Giant outlined SVG ranking glyphs (`1` to `10`) for your library's highest-rated titles.
-* **Media Quality & Spec Badges:** Automatic badges (4K UHD, HDR, 5.1 Surround, MKV/MP4) parsed from filenames and media tracks.
+* **Media Quality & Spec Badges:** Automatic badges (`4K UHD`, `HDR`, `5.1 Surround`, `MKV`/`MP4`) parsed from filenames and media tracks.
 
-### 🎮 Pro Playback Experience
+### 🎮 Pro Playback Engine
 * **Local VLC Engine:** Hardware-accelerated playback with position memory and real-time state synchronization over WebSockets.
 * **Smart "Continue Watching":** Tracks exact playback positions; resumes seamlessly or queues the chronological next unwatched episode.
 * **"Play Something" Shuffle Mode:** Can't decide what to watch? Press <kbd>S</kbd> or click the Navbar button for instant randomized suggestions with auto-preview.
@@ -88,96 +118,117 @@ Choose the version you want to run:
 * **Executive Statistics Dashboard:** Real-time metrics bar calculating total gigabytes on disk, titles count, completed titles, and hours of watch time.
 * **TMDB Metadata Matcher:** Automatic fuzzy title matching with manual search override modal for fixing posters and backdrops.
 
-### ⌨️ Desktop Keyboard Shortcuts
-| Key | Action |
-| :--- | :--- |
-| <kbd>Space</kbd> | Play / Pause video |
-| <kbd>F</kbd> | Toggle Fullscreen |
-| <kbd>S</kbd> | "Play Something" Shuffle Picker |
-| <kbd>/</kbd> | Instant Search |
-| <kbd>?</kbd> | Open Shortcuts Help Sheet |
-| <kbd>Esc</kbd> | Close Modals / Dismiss Overlays |
+---
+
+## ⌨️ Desktop Keyboard Shortcuts
+
+| Key | Action | Context |
+| :---: | :--- | :--- |
+| <kbd>Space</kbd> | Play / Pause video | Video Player |
+| <kbd>F</kbd> | Toggle Fullscreen | Video Player |
+| <kbd>S</kbd> | Launch "Play Something" Shuffle Picker | Global |
+| <kbd>/</kbd> | Instant Library Search Focus | Global |
+| <kbd>?</kbd> | Open Keyboard Shortcuts Cheat Sheet | Global |
+| <kbd>Esc</kbd> | Close Modal / Player / Drawer | Global |
 
 ---
 
 ## 🚀 Quick Start (Ubuntu Linux)
 
-### Prerequisites
-Make sure you have Python 3.10+, Node.js 18+, and VLC installed:
+### 1. Prerequisites
+Ensure you have Python 3.10+, Node.js 18+, and VLC installed:
 ```bash
-sudo apt update
-sudo apt install python3 python3-venv nodejs npm vlc curl
+sudo apt update && sudo apt install -y python3 python3-venv nodejs npm vlc curl
 ```
 
-### Installation
+### 2. Clone & Setup
+```bash
+git clone https://github.com/vamshir21/CineTrack.git
+cd CineTrack
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/vamshir21/CineTrack.git
-   cd CineTrack
-   ```
+# Run the automated installer
+chmod +x install.sh launch-cinetrack.sh
+./install.sh
+```
 
-2. **Run the one-step setup installer:**
-   ```bash
-   chmod +x install.sh launch-cinetrack.sh
-   ./install.sh
-   ```
+### 3. TMDB API Key Setup
+Get a free API key from [The Movie Database (TMDB)](https://www.themoviedb.org/settings/api) for posters, backdrops, and synopses:
+```bash
+cp .env.example .env
+nano .env
+# Set: TMDB_API_KEY=your_tmdb_v3_key
+```
 
-3. **Configure your TMDB API Key:**
-   ```bash
-   cp .env.example .env
-   nano .env
-   # Add your free TMDB v3 API Key:
-   # TMDB_API_KEY=your_actual_key_here
-   ```
-
-4. **Launch CineTrack:**
-   ```bash
-   ./launch-cinetrack.sh
-   ```
-   Open your browser at **`http://localhost:8088`** (or access via your local network).
+### 4. Launch CineTrack
+```bash
+./launch-cinetrack.sh
+```
+Open **`http://localhost:8088`** in your browser.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture & Technology Stack
 
+```mermaid
+graph TD
+    Client["React 19 + Vite Frontend<br>(Tailwind CSS / Framer Motion / Lucide)"]
+    API["FastAPI ASGI Server<br>(Port 8088)"]
+    DB[("SQLite Database<br>(SQLAlchemy 2.0)")]
+    TMDB["TMDB API v3<br>(Artwork & Metadata Cache)"]
+    VLC["libVLC Engine<br>(Local Hardware Acceleration)"]
+    Disk["Local Storage Filesystem<br>(/home/.../Movies & TV)"]
+
+    Client <-->|REST & WebSocket Status| API
+    API <-->|Relational Queries| DB
+    API <-->|Metadata & Image Downloads| TMDB
+    API <-->|Playback Controller| VLC
+    VLC <-->|Direct File Access| Disk
 ```
-CineTrack 2.0
-├── frontend/                # React 19 + TypeScript + Vite + Tailwind CSS
-│   ├── src/
-│   │   ├── api/            # TanStack Query REST clients
-│   │   ├── components/     # Cards, Hero, Rails, Modals, VLC Video Rig
-│   │   ├── hooks/          # Keyboard shortcuts, hover portals, WebSocket status
-│   │   ├── pages/          # Home, Movies, TV Shows, Library (Stats), Search, Settings
-│   │   └── types/          # Strict TypeScript interfaces
-│   └── dist/               # Production assets served by FastAPI
-│
-├── backend/                 # Python 3.10+ / FastAPI
-│   ├── main.py             # FastAPI ASGI server & SPA static router
-│   ├── database.py         # SQLAlchemy engine & SQLite persistence
-│   ├── models.py           # Relational schema (Movies, Series, Seasons, Episodes, History)
-│   ├── routers/            # Modular APIs (media, playback, scanner, tmdb, watchlist)
-│   └── services/           # TMDB image caching, libVLC controller, background scanner
-│
-└── tests/                   # Automated unittest suite (20/20 test cases passing)
-```
+
+### Technology Breakdown
+* **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Framer Motion, TanStack Query, Lucide Icons
+* **Backend:** Python 3.10+, FastAPI, SQLite, SQLAlchemy, Pydantic v2, Uvicorn
+* **Playback:** libVLC (via `python-vlc`), WebSocket state telemetry
+* **Metadata:** TMDB API v3 with disk image caching in `~/.cinetrack/artwork/`
 
 ---
 
-## 🧪 Testing
+## 🧪 Automated Testing
 
-Run the full automated test suite:
+CineTrack includes an automated unit & regression test suite:
+
 ```bash
+# Run unit & deletion tests
 ./venv/bin/python -m unittest discover tests
-```
 
-Run live server integration tests:
-```bash
+# Run live API integration tests
 ./venv/bin/python test_backend.py
 ```
+
+Expected output:
+```text
+Ran 20 tests in 0.374s
+OK
+Results: 14/14 tests passed
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are warmly welcomed!
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ---
 
 ## 📄 License
 
-Distributed under the **MIT License**. See `LICENSE` for more details.
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more information.
+
+<div align="center">
+  <sub>Built with ❤️ by <a href="https://github.com/vamshir21">vamshir21</a></sub>
+</div>
