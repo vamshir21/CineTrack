@@ -63,7 +63,7 @@ export const PlaySomethingModal: React.FC<PlaySomethingModalProps> = ({ isOpen, 
         if (s1) {
           const eps = await libraryApi.getSeasonEpisodes(series.id, s1.season_number);
           if (eps && eps.length > 0) {
-            targetFile = eps[0].file_path;
+            targetFile = eps[0].file_path || '';
             targetEpId = eps[0].id;
             pos = eps[0].progress?.position || 0;
           }

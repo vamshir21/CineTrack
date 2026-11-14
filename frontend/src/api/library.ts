@@ -1,5 +1,5 @@
 import client from './client';
-import type { Movie, TVSeries, HomeData } from '../types';
+import type { Movie, TVSeries, HomeData, Episode, LibraryStats } from '../types';
 
 export const libraryApi = {
   getMovies: async (): Promise<Movie[]> => {
@@ -22,7 +22,7 @@ export const libraryApi = {
     return data;
   },
 
-  getSeasonEpisodes: async (seriesId: number, seasonNum: number) => {
+  getSeasonEpisodes: async (seriesId: number, seasonNum: number): Promise<Episode[]> => {
     const { data } = await client.get(
       `/api/library/series/${seriesId}/seasons/${seasonNum}/episodes`
     );
@@ -55,11 +55,46 @@ export const libraryApi = {
     return data;
   },
 
-  deleteMovie: async (id: number) => {
-    await client.delete(`/api/library/movies/${id}`);
+  deleteMovie: async (id: number, deleteFile: boolean = false) => {
+    const { data } = await client.delete(`/api/library/movies/${id}`, {
+      params: { delete_file: deleteFile },
+    });
+    return data;
   },
 
-  deleteSeries: async (id: number) => {
-    await client.delete(`/api/library/series/${id}`);
+  deleteSeries: async (id: number, deleteFile: boolean = false) => {
+    const { data } = await client.delete(`/api/library/series/${id}`, {
+      params: { delete_file: deleteFile },
+    });
+    return data;
+  },
+
+  deleteEpisode: async (id: number, deleteFile: boolean = false) => {
+    const { data } = await client.delete(`/api/library/episodes/${id}`, {
+      params: { delete_file: deleteFile },
+    });
+    return data;
+  },
+
+  markWatched: async (mediaType: string, mediaId: number) => {
+    const { data } = await client.post('/api/library/watched', {
+      media_type: mediaType,
+      media_id: mediaId,
+    });
+    return data;
+  },
+
+  markUnwatched: async (mediaType: string, mediaId: number) => {
+    const { data } = await client.post('/api/library/unwatched', {
+      media_type: mediaType,
+      media_id: mediaId,
+    });
+    return data;
+  },
+
+  getStats: async (): Promise<LibraryStats> => {
+    const { data } = await client.get('/api/library/stats');
+    return data;
   },
 };
+

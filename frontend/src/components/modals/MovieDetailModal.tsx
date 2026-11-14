@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Plus, Check, Star, Clock, Sparkles } from 'lucide-react';
+import { X, Play, Plus, Check, Star, Clock, Sparkles, Trash2, CheckCircle2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { watchlistApi } from '../../api/watchlist';
+import { libraryApi } from '../../api/library';
 import type { Movie } from '../../types';
 import { ImageWithFallback } from '../common/ImageWithFallback';
 import { formatYear, formatRuntime } from '../../utils/timeUtils';
 import { extractMediaSpecs } from '../../utils/mediaBadgeUtils';
 import { ProgressBar } from '../cards/ProgressBar';
 import { TMDBMatchModal } from './TMDBMatchModal';
+import { DeleteConfirmModal } from './DeleteConfirmModal';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -23,12 +25,15 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 }) => {
   const queryClient = useQueryClient();
   const [showMatchModal, setShowMatchModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const { data: watchlistStatus } = useQuery({
     queryKey: ['watchlist-check', 'movie', movie?.id],
     queryFn: () => (movie ? watchlistApi.checkWatchlist('movie', movie.id) : { in_watchlist: false }),
     enabled: !!movie,
   });
+
+  const isWatched = !!movie?.progress?.completed;
 
   const toggleWatchlist = useMutation({
     mutationFn: async () => {
@@ -44,6 +49,34 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['watchlist-check', 'movie', movie?.id] });
     },
   });
+
+  const toggleWatched = useMutation({
+    mutationFn: async () => {
+      if (!movie) return;
+      if (isWatched) {
+        await libraryApi.markUnwatched('movie', movie.id);
+      } else {
+        await libraryApi.markWatched('movie', movie.id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['movies'] });
+      queryClient.invalidateQueries({ queryKey: ['home'] });
+      queryClient.invalidateQueries({ queryKey: ['continue-watching'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+      onClose();
+    },
+  });
+
+  const handleDeleteMovie = async (deleteFile: boolean) => {
+    if (!movie) return;
+    await libraryApi.deleteMovie(movie.id, deleteFile);
+    queryClient.invalidateQueries({ queryKey: ['movies'] });
+    queryClient.invalidateQueries({ queryKey: ['home'] });
+    queryClient.invalidateQueries({ queryKey: ['continue-watching'] });
+    queryClient.invalidateQueries({ queryKey: ['stats'] });
+    onClose();
+  };
 
   if (!movie) return null;
 
@@ -94,7 +127,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               </h1>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-3 pt-1">
+              <div className="flex flex-wrap items-center gap-3 pt-1">
                 <button
                   onClick={() => onPlay(movie)}
                   className="flex items-center gap-2 bg-white text-black font-bold px-6 py-2.5 rounded hover:bg-neutral-200 transition-colors shadow-lg active:scale-95 text-sm"
@@ -121,12 +154,34 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 </button>
 
                 <button
+                  onClick={() => toggleWatched.mutate()}
+                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded border transition-colors text-sm font-medium ${
+                    isWatched
+                      ? 'bg-green-600/30 border-green-500/50 text-green-400 hover:bg-green-600/40'
+                      : 'bg-neutral-800/80 border-white/20 text-neutral-300 hover:text-white hover:bg-neutral-700'
+                  }`}
+                  title={isWatched ? 'Mark as Unwatched' : 'Mark as Watched'}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{isWatched ? 'Watched' : 'Mark Watched'}</span>
+                </button>
+
+                <button
                   onClick={() => setShowMatchModal(true)}
                   className="flex items-center gap-1.5 bg-neutral-800/80 hover:bg-neutral-700 text-neutral-300 hover:text-white font-medium px-3.5 py-2.5 rounded border border-white/20 transition-colors text-sm"
                   title="Search & match on TMDB"
                 >
                   <Sparkles className="w-4 h-4 text-yellow-400" />
                   <span>{movie.tmdb_id ? 'Fix Match' : 'Match TMDB'}</span>
+                </button>
+
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="flex items-center gap-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-400 hover:text-red-300 font-medium px-3.5 py-2.5 rounded border border-red-800/50 transition-colors text-sm ml-auto"
+                  title="Delete movie from library"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete</span>
                 </button>
               </div>
             </div>
@@ -202,6 +257,18 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             queryClient.invalidateQueries({ queryKey: ['home'] });
             onClose();
           }}
+        />
+      )}
+
+      {showDeleteModal && (
+        <DeleteConfirmModal
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDeleteMovie}
+          title={movie.title}
+          mediaType="movie"
+          filePath={movie.file_path}
+          fileSize={movie.file_size}
         />
       )}
     </AnimatePresence>

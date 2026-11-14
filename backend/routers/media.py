@@ -2,17 +2,28 @@
 Library / media router.
 """
 import json
+import logging
+import os
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+logger = logging.getLogger(__name__)
+
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.models import Movie, TVSeries, Season, Episode, WatchHistory, Watchlist
 
 router = APIRouter(prefix="/api/library", tags=["library"])
+
+
+class MarkWatchedRequest(BaseModel):
+    media_type: str  # "movie", "episode", "season", "series"
+    media_id: int
+
 
 
 # ── Progress helpers ───────────────────────────────────────────────────────────
@@ -180,13 +191,35 @@ def get_movie(movie_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/movies/{movie_id}")
-def delete_movie(movie_id: int, db: Session = Depends(get_db)):
+def delete_movie(movie_id: int, delete_file: bool = False, db: Session = Depends(get_db)):
     movie = db.query(Movie).filter(Movie.id == movie_id).first()
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
+
+    file_deleted = False
+    if delete_file and movie.file_path:
+        try:
+            if os.path.exists(movie.file_path):
+                os.remove(movie.file_path)
+                file_deleted = True
+                logger.info(f"Permanently deleted movie file from disk: {movie.file_path}")
+        except Exception as e:
+            logger.error(f"Failed to delete file {movie.file_path}: {e}")
+
+    # Clean up watch history and watchlist entries
+    db.query(WatchHistory).filter(
+        WatchHistory.media_type == "movie",
+        WatchHistory.media_id == movie_id
+    ).delete(synchronize_session=False)
+
+    db.query(Watchlist).filter(
+        Watchlist.media_type == "movie",
+        Watchlist.media_id == movie_id
+    ).delete(synchronize_session=False)
+
     db.delete(movie)
     db.commit()
-    return {"deleted": movie_id}
+    return {"deleted": movie_id, "file_deleted": file_deleted}
 
 
 @router.get("/series")
@@ -218,13 +251,80 @@ def list_episodes(series_id: int, season_num: int, db: Session = Depends(get_db)
 
 
 @router.delete("/series/{series_id}")
-def delete_series(series_id: int, db: Session = Depends(get_db)):
+def delete_series(series_id: int, delete_file: bool = False, db: Session = Depends(get_db)):
     series = db.query(TVSeries).filter(TVSeries.id == series_id).first()
     if not series:
         raise HTTPException(status_code=404, detail="Series not found")
+
+    episodes = db.query(Episode).filter(Episode.series_id == series_id).all()
+    ep_ids = [e.id for e in episodes]
+
+    files_deleted_count = 0
+    if delete_file:
+        for ep in episodes:
+            if ep.file_path:
+                try:
+                    if os.path.exists(ep.file_path):
+                        os.remove(ep.file_path)
+                        files_deleted_count += 1
+                        logger.info(f"Permanently deleted episode file from disk: {ep.file_path}")
+                except Exception as e:
+                    logger.error(f"Failed to delete episode file {ep.file_path}: {e}")
+
+    # Clean up watch history for all episodes in this series
+    if ep_ids:
+        db.query(WatchHistory).filter(
+            WatchHistory.media_type == "episode",
+            WatchHistory.media_id.in_(ep_ids)
+        ).delete(synchronize_session=False)
+
+    # Clean up watchlist
+    db.query(Watchlist).filter(
+        Watchlist.media_type == "series",
+        Watchlist.media_id == series_id
+    ).delete(synchronize_session=False)
+
+    # Delete series (cascades to seasons & episodes)
     db.delete(series)
     db.commit()
-    return {"deleted": series_id}
+    return {"deleted": series_id, "files_deleted_count": files_deleted_count, "file_deleted": files_deleted_count > 0}
+
+
+@router.delete("/episodes/{episode_id}")
+def delete_episode(episode_id: int, delete_file: bool = False, db: Session = Depends(get_db)):
+    episode = db.query(Episode).filter(Episode.id == episode_id).first()
+    if not episode:
+        raise HTTPException(status_code=404, detail="Episode not found")
+
+    file_deleted = False
+    if delete_file and episode.file_path:
+        try:
+            if os.path.exists(episode.file_path):
+                os.remove(episode.file_path)
+                file_deleted = True
+                logger.info(f"Permanently deleted episode file from disk: {episode.file_path}")
+        except Exception as e:
+            logger.error(f"Failed to delete episode file {episode.file_path}: {e}")
+
+    # Delete watch history
+    db.query(WatchHistory).filter(
+        WatchHistory.media_type == "episode",
+        WatchHistory.media_id == episode_id
+    ).delete(synchronize_session=False)
+
+    season_id = episode.season_id
+    db.delete(episode)
+    db.commit()
+
+    # Update season episode count if needed
+    if season_id:
+        count = db.query(Episode).filter(Episode.season_id == season_id).count()
+        season = db.query(Season).filter(Season.id == season_id).first()
+        if season:
+            season.episode_count = count
+            db.commit()
+
+    return {"deleted": episode_id, "file_deleted": file_deleted}
 
 
 @router.get("/recently-added")
@@ -450,3 +550,149 @@ def home(db: Session = Depends(get_db)):
             "watchlist": watchlist_items,
         },
     }
+
+
+@router.post("/watched")
+def mark_watched(body: MarkWatchedRequest, db: Session = Depends(get_db)):
+    """Mark a movie, episode, season, or entire series as watched."""
+    now = datetime.now(timezone.utc)
+    if body.media_type == "movie":
+        movie = db.query(Movie).filter(Movie.id == body.media_id).first()
+        if not movie:
+            raise HTTPException(status_code=404, detail="Movie not found")
+        dur = float((movie.runtime or 90) * 60)
+        hist = db.query(WatchHistory).filter(WatchHistory.media_type == "movie", WatchHistory.media_id == body.media_id).first()
+        if not hist:
+            hist = WatchHistory(media_type="movie", media_id=body.media_id)
+            db.add(hist)
+        hist.position_seconds = dur
+        hist.duration_seconds = dur
+        hist.completed = True
+        hist.watched_at = now
+    elif body.media_type == "episode":
+        ep = db.query(Episode).filter(Episode.id == body.media_id).first()
+        if not ep:
+            raise HTTPException(status_code=404, detail="Episode not found")
+        dur = float((ep.runtime or 45) * 60)
+        hist = db.query(WatchHistory).filter(WatchHistory.media_type == "episode", WatchHistory.media_id == body.media_id).first()
+        if not hist:
+            hist = WatchHistory(media_type="episode", media_id=body.media_id)
+            db.add(hist)
+        hist.position_seconds = dur
+        hist.duration_seconds = dur
+        hist.completed = True
+        hist.watched_at = now
+    elif body.media_type == "season":
+        season = db.query(Season).filter(Season.id == body.media_id).first()
+        if not season:
+            raise HTTPException(status_code=404, detail="Season not found")
+        eps = db.query(Episode).filter(Episode.season_id == body.media_id).all()
+        for ep in eps:
+            dur = float((ep.runtime or 45) * 60)
+            hist = db.query(WatchHistory).filter(WatchHistory.media_type == "episode", WatchHistory.media_id == ep.id).first()
+            if not hist:
+                hist = WatchHistory(media_type="episode", media_id=ep.id)
+                db.add(hist)
+            hist.position_seconds = dur
+            hist.duration_seconds = dur
+            hist.completed = True
+            hist.watched_at = now
+    elif body.media_type == "series":
+        series = db.query(TVSeries).filter(TVSeries.id == body.media_id).first()
+        if not series:
+            raise HTTPException(status_code=404, detail="Series not found")
+        eps = db.query(Episode).filter(Episode.series_id == body.media_id).all()
+        for ep in eps:
+            dur = float((ep.runtime or 45) * 60)
+            hist = db.query(WatchHistory).filter(WatchHistory.media_type == "episode", WatchHistory.media_id == ep.id).first()
+            if not hist:
+                hist = WatchHistory(media_type="episode", media_id=ep.id)
+                db.add(hist)
+            hist.position_seconds = dur
+            hist.duration_seconds = dur
+            hist.completed = True
+            hist.watched_at = now
+    else:
+        raise HTTPException(status_code=400, detail="Invalid media_type")
+
+    db.commit()
+    return {"status": "marked_watched", "media_type": body.media_type, "media_id": body.media_id}
+
+
+@router.post("/unwatched")
+def mark_unwatched(body: MarkWatchedRequest, db: Session = Depends(get_db)):
+    """Mark a movie, episode, season, or entire series as unwatched."""
+    if body.media_type == "movie":
+        db.query(WatchHistory).filter(
+            WatchHistory.media_type == "movie",
+            WatchHistory.media_id == body.media_id
+        ).delete(synchronize_session=False)
+    elif body.media_type == "episode":
+        db.query(WatchHistory).filter(
+            WatchHistory.media_type == "episode",
+            WatchHistory.media_id == body.media_id
+        ).delete(synchronize_session=False)
+    elif body.media_type == "season":
+        eps = db.query(Episode.id).filter(Episode.season_id == body.media_id).all()
+        ep_ids = [e[0] for e in eps]
+        if ep_ids:
+            db.query(WatchHistory).filter(
+                WatchHistory.media_type == "episode",
+                WatchHistory.media_id.in_(ep_ids)
+            ).delete(synchronize_session=False)
+    elif body.media_type == "series":
+        eps = db.query(Episode.id).filter(Episode.series_id == body.media_id).all()
+        ep_ids = [e[0] for e in eps]
+        if ep_ids:
+            db.query(WatchHistory).filter(
+                WatchHistory.media_type == "episode",
+                WatchHistory.media_id.in_(ep_ids)
+            ).delete(synchronize_session=False)
+    else:
+        raise HTTPException(status_code=400, detail="Invalid media_type")
+
+    db.commit()
+    return {"status": "marked_unwatched", "media_type": body.media_type, "media_id": body.media_id}
+
+
+@router.get("/stats")
+def get_library_stats(db: Session = Depends(get_db)):
+    """Return comprehensive library statistics for the dashboard."""
+    total_movies = db.query(Movie).count()
+    total_series = db.query(TVSeries).count()
+    total_seasons = db.query(Season).count()
+    total_episodes = db.query(Episode).count()
+
+    movie_sizes = db.query(Movie.file_size).all()
+    ep_sizes = db.query(Episode.file_size).all()
+    total_size_bytes = sum(m[0] or 0 for m in movie_sizes) + sum(e[0] or 0 for e in ep_sizes)
+
+    if total_size_bytes >= 1024 ** 4:
+        total_size_formatted = f"{total_size_bytes / (1024 ** 4):.2f} TB"
+    elif total_size_bytes >= 1024 ** 3:
+        total_size_formatted = f"{total_size_bytes / (1024 ** 3):.2f} GB"
+    elif total_size_bytes >= 1024 ** 2:
+        total_size_formatted = f"{total_size_bytes / (1024 ** 2):.1f} MB"
+    else:
+        total_size_formatted = f"{total_size_bytes} B"
+
+    watch_records = db.query(WatchHistory.position_seconds, WatchHistory.completed).all()
+    total_watch_seconds = sum(w[0] or 0 for w in watch_records)
+    completed_titles = sum(1 for w in watch_records if w[1])
+
+    hours = int(total_watch_seconds // 3600)
+    minutes = int((total_watch_seconds % 3600) // 60)
+    total_watch_formatted = f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
+
+    return {
+        "total_movies": total_movies,
+        "total_series": total_series,
+        "total_seasons": total_seasons,
+        "total_episodes": total_episodes,
+        "total_size_bytes": total_size_bytes,
+        "total_size_formatted": total_size_formatted,
+        "total_watch_seconds": total_watch_seconds,
+        "total_watch_formatted": total_watch_formatted,
+        "completed_titles": completed_titles,
+    }
+

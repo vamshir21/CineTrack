@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Plus, Check, Star, Clock, Sparkles } from 'lucide-react';
+import { X, Play, Plus, Check, Star, Clock, Sparkles, Trash2, CheckCircle2, CheckCheck } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { libraryApi } from '../../api/library';
 import { watchlistApi } from '../../api/watchlist';
@@ -10,6 +10,7 @@ import { ProgressBar } from '../cards/ProgressBar';
 import { formatYear, formatRuntime } from '../../utils/timeUtils';
 import { extractMediaSpecs } from '../../utils/mediaBadgeUtils';
 import { TMDBMatchModal } from './TMDBMatchModal';
+import { DeleteConfirmModal } from './DeleteConfirmModal';
 
 interface SeriesDetailModalProps {
   series: TVSeries | null;
@@ -25,6 +26,8 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
   const queryClient = useQueryClient();
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [showMatchModal, setShowMatchModal] = useState(false);
+  const [showSeriesDeleteModal, setShowSeriesDeleteModal] = useState(false);
+  const [episodeToDelete, setEpisodeToDelete] = useState<Episode | null>(null);
 
   // Fetch full series details with seasons
   const { data: fullSeries } = useQuery({
@@ -73,10 +76,82 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
     }
   }, [fullSeries]);
 
+  const handleDeleteSeries = async (deleteFile: boolean) => {
+    if (!series) return;
+    await libraryApi.deleteSeries(series.id, deleteFile);
+    queryClient.invalidateQueries({ queryKey: ['series'] });
+    queryClient.invalidateQueries({ queryKey: ['home'] });
+    queryClient.invalidateQueries({ queryKey: ['continue-watching'] });
+    queryClient.invalidateQueries({ queryKey: ['stats'] });
+    onClose();
+  };
+
+  const handleDeleteEpisode = async (deleteFile: boolean) => {
+    if (!episodeToDelete) return;
+    await libraryApi.deleteEpisode(episodeToDelete.id, deleteFile);
+    queryClient.invalidateQueries({ queryKey: ['series'] });
+    queryClient.invalidateQueries({ queryKey: ['series', series?.id] });
+    queryClient.invalidateQueries({ queryKey: ['episodes', series?.id, selectedSeason] });
+    queryClient.invalidateQueries({ queryKey: ['home'] });
+    queryClient.invalidateQueries({ queryKey: ['continue-watching'] });
+    queryClient.invalidateQueries({ queryKey: ['stats'] });
+    setEpisodeToDelete(null);
+  };
+
+  const toggleSeriesWatched = useMutation({
+    mutationFn: async (currentlyWatched: boolean) => {
+      if (!series) return;
+      if (currentlyWatched) {
+        await libraryApi.markUnwatched('series', series.id);
+      } else {
+        await libraryApi.markWatched('series', series.id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['series'] });
+      queryClient.invalidateQueries({ queryKey: ['series', series?.id] });
+      queryClient.invalidateQueries({ queryKey: ['episodes', series?.id, selectedSeason] });
+      queryClient.invalidateQueries({ queryKey: ['home'] });
+      queryClient.invalidateQueries({ queryKey: ['continue-watching'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+    },
+  });
+
+  const markSeasonWatchedMutation = useMutation({
+    mutationFn: async (seasonId: number) => {
+      await libraryApi.markWatched('season', seasonId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['series'] });
+      queryClient.invalidateQueries({ queryKey: ['series', series?.id] });
+      queryClient.invalidateQueries({ queryKey: ['episodes', series?.id, selectedSeason] });
+      queryClient.invalidateQueries({ queryKey: ['home'] });
+      queryClient.invalidateQueries({ queryKey: ['continue-watching'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+    },
+  });
+
+  const handleToggleEpisodeWatched = async (e: React.MouseEvent, ep: Episode) => {
+    e.stopPropagation();
+    const isEpWatched = !!ep.progress?.completed;
+    if (isEpWatched) {
+      await libraryApi.markUnwatched('episode', ep.id);
+    } else {
+      await libraryApi.markWatched('episode', ep.id);
+    }
+    queryClient.invalidateQueries({ queryKey: ['series'] });
+    queryClient.invalidateQueries({ queryKey: ['series', series?.id] });
+    queryClient.invalidateQueries({ queryKey: ['episodes', series?.id, selectedSeason] });
+    queryClient.invalidateQueries({ queryKey: ['home'] });
+    queryClient.invalidateQueries({ queryKey: ['continue-watching'] });
+    queryClient.invalidateQueries({ queryKey: ['stats'] });
+  };
+
   if (!series) return null;
 
   const displayData = fullSeries || series;
   const seasons = ('seasons' in displayData ? (displayData as any).seasons : []) as Season[];
+  const selectedSeasonObj = seasons.find((s) => s.season_number === selectedSeason);
   const backdrop = displayData.backdrop_path || displayData.poster_path;
   const year = formatYear(displayData.first_air_date || '');
   const rating = displayData.vote_average ? displayData.vote_average.toFixed(1) : null;
@@ -125,7 +200,7 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
               </h1>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-3 pt-1">
+              <div className="flex flex-wrap items-center gap-3 pt-1">
                 {firstEpisodeToPlay && (
                   <button
                     onClick={() => onPlayEpisode(firstEpisodeToPlay)}
@@ -154,12 +229,37 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
                 </button>
 
                 <button
+                  onClick={() => {
+                    const isWatched = !!displayData.progress?.completed;
+                    toggleSeriesWatched.mutate(isWatched);
+                  }}
+                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded border transition-colors text-sm font-medium ${
+                    displayData.progress?.completed
+                      ? 'bg-green-600/30 border-green-500/50 text-green-400 hover:bg-green-600/40'
+                      : 'bg-neutral-800/80 border-white/20 text-neutral-300 hover:text-white hover:bg-neutral-700'
+                  }`}
+                  title={displayData.progress?.completed ? 'Mark Series Unwatched' : 'Mark Series Watched'}
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{displayData.progress?.completed ? 'Watched' : 'Mark Watched'}</span>
+                </button>
+
+                <button
                   onClick={() => setShowMatchModal(true)}
                   className="flex items-center gap-1.5 bg-neutral-800/80 hover:bg-neutral-700 text-neutral-300 hover:text-white font-medium px-3.5 py-2.5 rounded border border-white/20 transition-colors text-sm"
                   title="Search & match on TMDB"
                 >
                   <Sparkles className="w-4 h-4 text-yellow-400" />
                   <span>{displayData.tmdb_id ? 'Fix Match' : 'Match TMDB'}</span>
+                </button>
+
+                <button
+                  onClick={() => setShowSeriesDeleteModal(true)}
+                  className="flex items-center gap-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-400 hover:text-red-300 font-medium px-3.5 py-2.5 rounded border border-red-800/50 transition-colors text-sm ml-auto"
+                  title="Delete series from library"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete Series</span>
                 </button>
               </div>
             </div>
@@ -212,25 +312,38 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
 
             {/* Seasons & Episodes Section */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <h3 className="text-xl font-bold text-white tracking-wide">Episodes</h3>
 
-                {/* Season Dropdown */}
-                {seasons.length > 0 ? (
-                  <select
-                    value={selectedSeason}
-                    onChange={(e) => setSelectedSeason(Number(e.target.value))}
-                    className="bg-[#2a2a2a] text-white border border-neutral-700 rounded px-3 py-1.5 text-sm font-semibold focus:outline-none focus:border-netflix cursor-pointer"
-                  >
-                    {seasons.map((s) => (
-                      <option key={s.id} value={s.season_number}>
-                        {s.name || `Season ${s.season_number}`} ({s.episode_count} eps)
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <span className="text-xs text-neutral-400">Season {selectedSeason}</span>
-                )}
+                {/* Season Dropdown & Actions */}
+                <div className="flex items-center gap-2.5">
+                  {selectedSeasonObj && (
+                    <button
+                      onClick={() => markSeasonWatchedMutation.mutate(selectedSeasonObj.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-neutral-800/80 hover:bg-neutral-700 text-neutral-300 hover:text-white border border-neutral-700 text-xs font-semibold transition"
+                      title="Mark all episodes in this season as watched"
+                    >
+                      <CheckCheck className="w-3.5 h-3.5 text-green-400" />
+                      <span>Mark Season Watched</span>
+                    </button>
+                  )}
+
+                  {seasons.length > 0 ? (
+                    <select
+                      value={selectedSeason}
+                      onChange={(e) => setSelectedSeason(Number(e.target.value))}
+                      className="bg-[#2a2a2a] text-white border border-neutral-700 rounded px-3 py-1.5 text-sm font-semibold focus:outline-none focus:border-netflix cursor-pointer"
+                    >
+                      {seasons.map((s) => (
+                        <option key={s.id} value={s.season_number}>
+                          {s.name || `Season ${s.season_number}`} ({s.episode_count} eps)
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-xs text-neutral-400">Season {selectedSeason}</span>
+                  )}
+                </div>
               </div>
 
               {/* Episode List */}
@@ -286,17 +399,44 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
                             <h4 className="text-sm sm:text-base font-bold text-white group-hover:text-netflix transition-colors truncate">
                               {ep.title || `Episode ${ep.episode_number}`}
                             </h4>
-                            {ep.runtime && (
-                              <span className="text-xs text-neutral-400 shrink-0 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {formatRuntime(ep.runtime)}
-                              </span>
-                            )}
-                            {ep.file_path && (
-                              <span className="border border-neutral-700 text-neutral-400 text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0">
-                                {extractMediaSpecs(ep.file_path).resolution.includes('4K') ? '4K' : 'HD'}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-2 shrink-0">
+                              {ep.runtime && (
+                                <span className="text-xs text-neutral-400 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {formatRuntime(ep.runtime)}
+                                </span>
+                              )}
+                              {ep.file_path && (
+                                <span className="border border-neutral-700 text-neutral-400 text-[10px] px-1.5 py-0.5 rounded font-mono">
+                                  {extractMediaSpecs(ep.file_path).resolution.includes('4K') ? '4K' : 'HD'}
+                                </span>
+                              )}
+                              {/* Watched toggle button */}
+                              <button
+                                type="button"
+                                onClick={(e) => handleToggleEpisodeWatched(e, ep)}
+                                className={`p-1.5 rounded transition ${
+                                  isWatched
+                                    ? 'text-green-400 hover:text-green-300 hover:bg-green-950/40'
+                                    : 'text-neutral-500 hover:text-white hover:bg-neutral-700/60'
+                                }`}
+                                title={isWatched ? 'Mark Episode Unwatched' : 'Mark Episode Watched'}
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                              </button>
+                              {/* Delete episode button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEpisodeToDelete(ep);
+                                }}
+                                className="p-1.5 rounded text-neutral-500 hover:text-red-400 hover:bg-red-950/40 transition opacity-0 group-hover:opacity-100"
+                                title="Delete Episode"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
                           <p className="text-xs sm:text-sm text-neutral-400 line-clamp-2 mt-1 leading-relaxed">
                             {ep.overview || 'No episode description available.'}
@@ -327,6 +467,30 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
             queryClient.invalidateQueries({ queryKey: ['home'] });
             onClose();
           }}
+        />
+      )}
+
+      {showSeriesDeleteModal && (
+        <DeleteConfirmModal
+          isOpen={showSeriesDeleteModal}
+          onClose={() => setShowSeriesDeleteModal(false)}
+          onConfirm={handleDeleteSeries}
+          title={displayData.title}
+          mediaType="series"
+        />
+      )}
+
+      {episodeToDelete && (
+        <DeleteConfirmModal
+          isOpen={!!episodeToDelete}
+          onClose={() => setEpisodeToDelete(null)}
+          onConfirm={handleDeleteEpisode}
+          title={episodeToDelete.title || `Episode ${episodeToDelete.episode_number}`}
+          mediaType="episode"
+          filePath={episodeToDelete.file_path}
+          fileSize={episodeToDelete.file_size}
+          seasonNumber={episodeToDelete.season_number}
+          episodeNumber={episodeToDelete.episode_number}
         />
       )}
     </AnimatePresence>

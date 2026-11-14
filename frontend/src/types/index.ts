@@ -10,6 +10,7 @@ export interface Movie {
   backdrop_path?: string;
   genres?: string[];
   vote_average?: number;
+  file_size?: number;
   added_at: string;
   progress?: { position: number; duration: number; completed: boolean };
 }
@@ -52,7 +53,20 @@ export interface Episode {
   overview?: string;
   still_path?: string;
   runtime?: number;
+  file_size?: number;
   progress?: { position: number; duration: number; completed: boolean };
+}
+
+export interface LibraryStats {
+  total_movies: number;
+  total_series: number;
+  total_seasons: number;
+  total_episodes: number;
+  total_size_bytes: number;
+  total_size_formatted: string;
+  total_watch_seconds: number;
+  total_watch_formatted: string;
+  completed_titles: number;
 }
 
 export interface WatchHistory {
