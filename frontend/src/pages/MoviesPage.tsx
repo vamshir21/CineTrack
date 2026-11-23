@@ -4,13 +4,17 @@ import { libraryApi } from '../api/library';
 import { playbackApi } from '../api/playback';
 import { MediaCard } from '../components/cards/MediaCard';
 import { MovieDetailModal } from '../components/modals/MovieDetailModal';
+import { CollectionRail } from '../components/rails/CollectionRail';
+import { CollectionDetailModal } from '../components/modals/CollectionDetailModal';
 import { usePlaybackStore } from '../store/playbackStore';
 import type { Movie } from '../types';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 
 export const MoviesPage: React.FC = () => {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('recent');
   const { setPlayerOpen } = usePlaybackStore();
 
@@ -19,10 +23,23 @@ export const MoviesPage: React.FC = () => {
     queryFn: libraryApi.getMovies,
   });
 
+  const { data: collections } = useQuery({
+    queryKey: ['library-collections'],
+    queryFn: libraryApi.getCollections,
+    staleTime: 1000 * 60 * 5,
+  });
+
   const allGenres = useMemo(() => {
     if (!movies) return [];
     const set = new Set<string>();
     movies.forEach((m) => m.genres?.forEach((g) => set.add(g)));
+    return Array.from(set).sort();
+  }, [movies]);
+
+  const allLanguages = useMemo(() => {
+    if (!movies) return [];
+    const set = new Set<string>();
+    movies.forEach((m) => m.languages?.forEach((l) => set.add(l)));
     return Array.from(set).sort();
   }, [movies]);
 
@@ -34,6 +51,10 @@ export const MoviesPage: React.FC = () => {
       list = list.filter((m) => m.genres?.includes(selectedGenre));
     }
 
+    if (selectedLanguage !== 'all') {
+      list = list.filter((m) => m.languages?.includes(selectedLanguage));
+    }
+
     if (sortBy === 'recent') {
       list.sort((a, b) => new Date(b.added_at).getTime() - new Date(a.added_at).getTime());
     } else if (sortBy === 'rating') {
@@ -43,7 +64,7 @@ export const MoviesPage: React.FC = () => {
     }
 
     return list;
-  }, [movies, selectedGenre, sortBy]);
+  }, [movies, selectedGenre, selectedLanguage, sortBy]);
 
   const handlePlay = async (movie: Movie) => {
     if (!movie.file_path) return;
@@ -87,6 +108,20 @@ export const MoviesPage: React.FC = () => {
             ))}
           </select>
 
+          {/* Language select */}
+          {allLanguages.length > 0 && (
+            <select
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              className="bg-[#2a2a2a] text-white border border-neutral-700 rounded px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-netflix cursor-pointer"
+            >
+              <option value="all">All Languages</option>
+              {allLanguages.map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          )}
+
           {/* Sort select */}
           <select
             value={sortBy}
@@ -99,6 +134,18 @@ export const MoviesPage: React.FC = () => {
           </select>
         </div>
       </div>
+
+      {/* Franchises & Collections Binge Rail */}
+      {collections && collections.length > 0 && selectedGenre === 'all' && (
+        <div className="-mx-8 md:-mx-12 mb-8">
+          <CollectionRail
+            title="Franchises & Movie Sagas"
+            subtitle="Browse and binge complete movie sagas in order"
+            collections={collections}
+            onSelectCollection={(cid) => setSelectedCollectionId(cid)}
+          />
+        </div>
+      )}
 
       {/* Grid of Movie Cards */}
       {filteredMovies.length > 0 ? (
@@ -128,6 +175,22 @@ export const MoviesPage: React.FC = () => {
           onPlay={(m) => {
             setSelectedMovie(null);
             handlePlay(m);
+          }}
+        />
+      )}
+
+      {/* Franchise & Collection Detail Modal */}
+      {selectedCollectionId && (
+        <CollectionDetailModal
+          collectionId={selectedCollectionId}
+          onClose={() => setSelectedCollectionId(null)}
+          onPlayMovie={(m) => {
+            setSelectedCollectionId(null);
+            handlePlay(m);
+          }}
+          onSelectMovie={(m) => {
+            setSelectedCollectionId(null);
+            setSelectedMovie(m);
           }}
         />
       )}

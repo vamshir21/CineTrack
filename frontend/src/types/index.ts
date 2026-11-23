@@ -9,6 +9,7 @@ export interface Movie {
   poster_path?: string;
   backdrop_path?: string;
   genres?: string[];
+  languages?: string[];
   vote_average?: number;
   file_size?: number;
   added_at: string;
@@ -24,6 +25,7 @@ export interface TVSeries {
   poster_path?: string;
   backdrop_path?: string;
   genres?: string[];
+  languages?: string[];
   vote_average?: number;
   number_of_seasons?: number;
   episode_count?: number;
@@ -54,6 +56,7 @@ export interface Episode {
   still_path?: string;
   runtime?: number;
   file_size?: number;
+  languages?: string[];
   progress?: { position: number; duration: number; completed: boolean };
 }
 
@@ -135,6 +138,104 @@ export interface SearchResult {
   movies: Movie[];
   series: TVSeries[];
   episodes: Episode[];
+}
+
+export interface CastMember {
+  id: number;
+  name: string;
+  character?: string;
+  profile_path?: string;
+  profile_url?: string;
+  order?: number;
+}
+
+export interface CrewMember {
+  id: number;
+  name: string;
+  job: string;
+  profile_path?: string;
+  profile_url?: string;
+}
+
+export interface CreditsData {
+  cast: CastMember[];
+  crew: CrewMember[];
+}
+
+export interface TrailerVideo {
+  key: string;
+  name: string;
+  type: string;
+  site: string;
+  official: boolean;
+}
+
+export interface TrailerData {
+  trailer: TrailerVideo | null;
+  videos: TrailerVideo[];
+}
+
+export interface MovieCollection {
+  collection_id: number;
+  collection_name: string;
+  overview?: string;
+  poster_url?: string;
+  backdrop_url?: string;
+  local_movies_count: number;
+  movies: Movie[];
+}
+
+export interface CollectionPart {
+  id: number;
+  title: string;
+  overview?: string;
+  release_date?: string;
+  poster_url?: string;
+  backdrop_url?: string;
+  vote_average?: number;
+  in_library: boolean;
+  local_movie?: Movie;
+}
+
+export interface CollectionDetail {
+  id: number;
+  name: string;
+  overview?: string;
+  poster_url?: string;
+  backdrop_url?: string;
+  parts: CollectionPart[];
+  owned_count: number;
+  total_count: number;
+}
+
+export interface WatchProvider {
+  provider_id: number;
+  provider_name: string;
+  logo_url?: string;
+}
+
+export interface WatchProvidersGroup {
+  flatrate?: WatchProvider[];
+  rent?: WatchProvider[];
+  buy?: WatchProvider[];
+  link?: string;
+}
+
+export interface UpcomingMovie {
+  id: number;
+  title: string;
+  overview?: string;
+  release_date?: string;
+  days_until?: number;
+  vote_average?: number;
+  poster_url?: string;
+  backdrop_url?: string;
+  genre_ids?: number[];
+  genres?: string[];
+  popularity?: number;
+  original_language?: string;
+  language_name?: string;
+  providers?: WatchProvider[] | WatchProvidersGroup;
 }
 
 export type MediaItem = Movie | TVSeries;

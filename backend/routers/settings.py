@@ -18,6 +18,7 @@ def _ensure_defaults(db: Session):
     db.commit()
 
 
+@router.get("")
 @router.get("/")
 def get_all_settings(db: Session = Depends(get_db)):
     _ensure_defaults(db)
@@ -26,6 +27,7 @@ def get_all_settings(db: Session = Depends(get_db)):
 
 
 @router.post("/batch")
+@router.put("")
 @router.put("/")
 def update_settings_batch(body: dict[str, str], db: Session = Depends(get_db)):
     for key, value in body.items():

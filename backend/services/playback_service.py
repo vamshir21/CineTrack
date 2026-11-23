@@ -117,9 +117,9 @@ class PlaybackService:
                     if m:
                         media_type = "movie"
 
-            # Completion criteria: mark complete if watched >= 93% OR within safe credit buffer of end
+            # Completion criteria: mark complete if watched >= 93% OR within credit buffer of end
             threshold_minutes = self._get_completion_threshold()
-            threshold_seconds = min(threshold_minutes * 60.0, 60.0)
+            threshold_seconds = max(30.0, threshold_minutes * 60.0)
             completed = False
             if duration > 30 and position > 0:
                 if (position / duration) >= 0.93 or (duration - position) <= threshold_seconds:
@@ -292,7 +292,7 @@ class PlaybackService:
 
             # Calculate whether playback was completed
             threshold_minutes = self._get_completion_threshold()
-            threshold_seconds = min(threshold_minutes * 60.0, 60.0)
+            threshold_seconds = max(30.0, threshold_minutes * 60.0)
             is_completed = (cur_dur > 30.0 and max_pos > 0.0) and (
                 (max_pos / cur_dur) >= 0.93 or (cur_dur - max_pos) <= threshold_seconds
             )

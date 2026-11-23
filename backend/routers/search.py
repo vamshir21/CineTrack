@@ -11,6 +11,7 @@ from backend.routers.media import _movie_out, _series_out, _episode_out
 router = APIRouter(prefix="/api/search", tags=["search"])
 
 
+@router.get("")
 @router.get("/")
 def search_library(
     q: str = Query(""),

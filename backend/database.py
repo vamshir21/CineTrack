@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from backend.config import DATABASE_URL
 
@@ -24,6 +24,18 @@ def get_db():
 
 
 def init_db():
-    """Create all tables."""
+    """Create all tables and apply incremental migrations."""
     from backend import models  # noqa: F401
     Base.metadata.create_all(bind=engine)
+
+    # Ensure collection columns exist on movies table
+    try:
+        with engine.connect() as conn:
+            cols = [r[1] for r in conn.execute(text("PRAGMA table_info(movies)")).fetchall()]
+            if "collection_id" not in cols:
+                conn.execute(text("ALTER TABLE movies ADD COLUMN collection_id INTEGER"))
+            if "collection_name" not in cols:
+                conn.execute(text("ALTER TABLE movies ADD COLUMN collection_name VARCHAR"))
+            conn.commit()
+    except Exception:
+        pass

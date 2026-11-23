@@ -12,6 +12,7 @@ from backend.routers.media import _movie_out, _series_out
 router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
 
 
+@router.get("")
 @router.get("/")
 def list_watchlist(db: Session = Depends(get_db)):
     items = db.query(Watchlist).order_by(Watchlist.added_at.desc()).all()
@@ -36,6 +37,7 @@ def list_watchlist(db: Session = Depends(get_db)):
     return result
 
 
+@router.post("")
 @router.post("/")
 def add_to_watchlist(body: WatchlistCreate, db: Session = Depends(get_db)):
     existing = (

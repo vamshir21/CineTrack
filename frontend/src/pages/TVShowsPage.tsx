@@ -11,6 +11,7 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner';
 export const TVShowsPage: React.FC = () => {
   const [selectedSeries, setSelectedSeries] = useState<TVSeries | null>(null);
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('recent');
   const { setPlayerOpen } = usePlaybackStore();
 
@@ -26,12 +27,23 @@ export const TVShowsPage: React.FC = () => {
     return Array.from(set).sort();
   }, [seriesList]);
 
+  const allLanguages = useMemo(() => {
+    if (!seriesList) return [];
+    const set = new Set<string>();
+    seriesList.forEach((s) => s.languages?.forEach((l) => set.add(l)));
+    return Array.from(set).sort();
+  }, [seriesList]);
+
   const filteredSeries = useMemo(() => {
     if (!seriesList) return [];
     let list = [...seriesList];
 
     if (selectedGenre !== 'all') {
       list = list.filter((s) => s.genres?.includes(selectedGenre));
+    }
+
+    if (selectedLanguage !== 'all') {
+      list = list.filter((s) => s.languages?.includes(selectedLanguage));
     }
 
     if (sortBy === 'recent') {
@@ -43,7 +55,7 @@ export const TVShowsPage: React.FC = () => {
     }
 
     return list;
-  }, [seriesList, selectedGenre, sortBy]);
+  }, [seriesList, selectedGenre, selectedLanguage, sortBy]);
 
   const handlePlayEpisode = async (ep: Episode) => {
     if (!ep.file_path) return;
@@ -87,6 +99,20 @@ export const TVShowsPage: React.FC = () => {
               <option key={g} value={g}>{g}</option>
             ))}
           </select>
+
+          {/* Language select */}
+          {allLanguages.length > 0 && (
+            <select
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              className="bg-[#2a2a2a] text-white border border-neutral-700 rounded px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-netflix cursor-pointer"
+            >
+              <option value="all">All Languages</option>
+              {allLanguages.map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          )}
 
           <select
             value={sortBy}

@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.models import Movie, TVSeries, Season, Episode, WatchHistory, Watchlist
+from backend.services import tmdb_service
 
 router = APIRouter(prefix="/api/library", tags=["library"])
 
@@ -77,6 +78,7 @@ def _series_progress(db: Session, series_id: int) -> dict:
 # ── Serializers ────────────────────────────────────────────────────────────────
 
 def _movie_out(movie: Movie, db: Session) -> dict:
+    from backend.services.language_service import extract_media_languages
     progress = _get_progress(db, "movie", movie.id)
     genres = []
     if movie.genres:
@@ -84,6 +86,7 @@ def _movie_out(movie: Movie, db: Session) -> dict:
             genres = json.loads(movie.genres)
         except Exception:
             pass
+    languages = extract_media_languages(movie.file_path)
     return {
         "id": movie.id,
         "title": movie.title,
@@ -95,6 +98,7 @@ def _movie_out(movie: Movie, db: Session) -> dict:
         "poster_path": movie.poster_path,
         "backdrop_path": movie.backdrop_path,
         "genres": genres,
+        "languages": languages,
         "vote_average": movie.vote_average,
         "added_at": movie.added_at.isoformat(),
         "file_size": movie.file_size,
@@ -117,11 +121,13 @@ def _season_out(season: Season) -> dict:
 
 
 def _episode_out(episode: Episode, db: Session) -> dict:
+    from backend.services.language_service import extract_media_languages
     progress = _get_progress(db, "episode", episode.id)
     series = db.query(TVSeries).filter(TVSeries.id == episode.series_id).first() if episode.series_id else None
     series_title = series.title if series else ""
     poster_path = series.poster_path if series else None
     backdrop_path = episode.still_path or (series.backdrop_path if series else None)
+    languages = extract_media_languages(episode.file_path)
     return {
         "id": episode.id,
         "series_id": episode.series_id,
@@ -138,6 +144,7 @@ def _episode_out(episode: Episode, db: Session) -> dict:
         "air_date": episode.air_date,
         "runtime": episode.runtime,
         "file_size": episode.file_size,
+        "languages": languages,
         "added_at": episode.added_at.isoformat() if episode.added_at else "",
         "progress": progress,
         "media_type": "episode",
@@ -145,6 +152,7 @@ def _episode_out(episode: Episode, db: Session) -> dict:
 
 
 def _series_out(series: TVSeries, db: Session, include_seasons: bool = False) -> dict:
+    from backend.services.language_service import extract_media_languages
     progress = _series_progress(db, series.id)
     genres = []
     if series.genres:
@@ -152,6 +160,8 @@ def _series_out(series: TVSeries, db: Session, include_seasons: bool = False) ->
             genres = json.loads(series.genres)
         except Exception:
             pass
+    first_ep = db.query(Episode).filter(Episode.series_id == series.id).first()
+    languages = extract_media_languages(first_ep.file_path if first_ep else None)
     out = {
         "id": series.id,
         "title": series.title,
@@ -161,6 +171,7 @@ def _series_out(series: TVSeries, db: Session, include_seasons: bool = False) ->
         "poster_path": series.poster_path,
         "backdrop_path": series.backdrop_path,
         "genres": genres,
+        "languages": languages,
         "vote_average": series.vote_average,
         "number_of_seasons": series.number_of_seasons,
         "added_at": series.added_at.isoformat(),
@@ -381,6 +392,70 @@ def get_next_episode(episode_id: int, db: Session = Depends(get_db)):
     if not next_ep:
         return {"has_next": False, "next_episode": None}
     return {"has_next": True, "next_episode": _episode_out(next_ep, db)}
+
+
+@router.get("/more-like-this/{media_type}/{item_id}")
+def get_more_like_this(media_type: str, item_id: int, limit: int = 6, db: Session = Depends(get_db)):
+    """Find related titles from the user's local library based on shared genres and similarity."""
+    target_genres = set()
+    if media_type == "movie":
+        cur = db.query(Movie).filter(Movie.id == item_id).first()
+        if not cur:
+            raise HTTPException(status_code=404, detail="Movie not found")
+        if cur.genres:
+            try:
+                target_genres = set(json.loads(cur.genres))
+            except Exception:
+                pass
+    elif media_type in ["series", "tv"]:
+        cur = db.query(TVSeries).filter(TVSeries.id == item_id).first()
+        if not cur:
+            raise HTTPException(status_code=404, detail="Series not found")
+        if cur.genres:
+            try:
+                target_genres = set(json.loads(cur.genres))
+            except Exception:
+                pass
+    else:
+        raise HTTPException(status_code=400, detail="Invalid media_type")
+
+    all_movies = db.query(Movie).all()
+    all_series = db.query(TVSeries).all()
+
+    candidates = []
+    for m in all_movies:
+        if media_type == "movie" and m.id == item_id:
+            continue
+        m_genres = set()
+        if m.genres:
+            try:
+                m_genres = set(json.loads(m.genres))
+            except Exception:
+                pass
+        overlap = len(target_genres.intersection(m_genres))
+        score = overlap * 3 + (m.vote_average or 0) * 0.2
+        if media_type == "movie":
+            score += 1
+        candidates.append((score, _movie_out(m, db)))
+
+    for s in all_series:
+        if media_type in ["series", "tv"] and s.id == item_id:
+            continue
+        s_genres = set()
+        if s.genres:
+            try:
+                s_genres = set(json.loads(s.genres))
+            except Exception:
+                pass
+        overlap = len(target_genres.intersection(s_genres))
+        score = overlap * 3 + (s.vote_average or 0) * 0.2
+        if media_type in ["series", "tv"]:
+            score += 1
+        candidates.append((score, _series_out(s, db)))
+
+    candidates.sort(key=lambda x: x[0], reverse=True)
+    return [c[1] for c in candidates[:limit]]
+
 
 
 def _get_continue_watching_items(db: Session, limit: int = 20) -> list:
@@ -695,4 +770,77 @@ def get_library_stats(db: Session = Depends(get_db)):
         "total_watch_formatted": total_watch_formatted,
         "completed_titles": completed_titles,
     }
+
+
+@router.get("/collections")
+def get_library_collections(db: Session = Depends(get_db)):
+    """Return all movie franchises & collections represented in the user's local library."""
+    # Backfill collection metadata for movies that have tmdb_id but missing collection_id
+    tmdb_service.sync_local_movie_collections(db)
+
+    movies = (
+        db.query(Movie)
+        .filter(Movie.collection_id.isnot(None))
+        .order_by(Movie.release_date.asc())
+        .all()
+    )
+
+    collections_map = {}
+    for m in movies:
+        cid = m.collection_id
+        if cid not in collections_map:
+            collections_map[cid] = {
+                "collection_id": cid,
+                "collection_name": m.collection_name or "Movie Collection",
+                "movies": [],
+            }
+        collections_map[cid]["movies"].append(_movie_out(m, db))
+
+    # Fetch collection poster & backdrop for each franchise
+    result = []
+    for cid, data in collections_map.items():
+        coll_info = tmdb_service.get_collection(cid)
+        result.append({
+            "collection_id": cid,
+            "collection_name": data["collection_name"],
+            "overview": coll_info.get("overview") if coll_info else None,
+            "poster_url": coll_info.get("poster_url") if coll_info else None,
+            "backdrop_url": coll_info.get("backdrop_url") if coll_info else None,
+            "local_movies_count": len(data["movies"]),
+            "movies": data["movies"],
+        })
+
+    # Sort collections by count (largest franchises first)
+    result.sort(key=lambda c: len(c["movies"]), reverse=True)
+    return result
+
+
+@router.get("/collections/{collection_id}")
+def get_collection_franchise(collection_id: int, db: Session = Depends(get_db)):
+    """Return full franchise overview cross-referenced with what parts exist locally."""
+    coll_info = tmdb_service.get_collection(collection_id)
+    if not coll_info:
+        raise HTTPException(status_code=404, detail="Collection not found")
+
+    local_movies = db.query(Movie).filter(Movie.tmdb_id.isnot(None)).all()
+    local_by_tmdb = {m.tmdb_id: _movie_out(m, db) for m in local_movies}
+
+    # Cross-reference parts
+    parts_with_library_status = []
+    for part in coll_info.get("parts", []):
+        tmdb_id = part["id"]
+        local_movie = local_by_tmdb.get(tmdb_id)
+        parts_with_library_status.append({
+            **part,
+            "in_library": local_movie is not None,
+            "local_movie": local_movie,
+        })
+
+    return {
+        **coll_info,
+        "parts": parts_with_library_status,
+        "owned_count": sum(1 for p in parts_with_library_status if p["in_library"]),
+        "total_count": len(parts_with_library_status),
+    }
+
 

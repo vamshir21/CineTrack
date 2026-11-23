@@ -86,13 +86,16 @@ export const PlayerOverlay: React.FC = () => {
   //    B) Episode just completed (status.completed === true)
   const isDismissed = dismissedForEpisode !== null && dismissedForEpisode === targetEpisodeId;
 
+  const thresholdMinutes = Number(settings?.completion_threshold_minutes) || 2;
+  const thresholdSeconds = Math.max(30, thresholdMinutes * 60);
+
   const isAtEndCredits =
     !!status?.playing &&
     duration >= 60 &&
     position >= 30 &&
     remaining > 0 &&
-    remaining <= 40 &&
-    progressPct >= 90;
+    remaining <= thresholdSeconds &&
+    progressPct >= 85;
 
   const isJustCompleted = !!status?.completed && !!status?.completed_episode_id;
 

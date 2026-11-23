@@ -1,5 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { settingsApi } from '../../api/settings';
 import { MediaCard } from '../cards/MediaCard';
 import type { MediaItem } from '../../types';
 
@@ -57,6 +59,15 @@ export const ContentRail: React.FC<ContentRailProps> = ({
     }
   };
 
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: settingsApi.getSettings,
+  });
+
+  const hoverEnabled = settings?.hover_preview_enabled !== 'false';
+  const hoverDelay = Number(settings?.hover_delay_ms) || 500;
+  const cardSize = (settings?.card_size as 'small' | 'medium' | 'large') || 'medium';
+
   // Row-level hover calculation: adjacent cards slide away to make room
   // Poster: base 200px, expanded 315px -> expansion 115px
   // Backdrop: base 295px, expanded 385px -> expansion 90px
@@ -65,10 +76,11 @@ export const ContentRail: React.FC<ContentRailProps> = ({
   const halfExpansion = Math.round(expansionWidth / 2);
 
   const handleCardMouseEnter = (index: number) => {
+    if (!hoverEnabled) return;
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     hoverTimeoutRef.current = setTimeout(() => {
       setHoveredIdx(index);
-    }, 300); // 300ms Netflix deliberate hover delay
+    }, hoverDelay);
   };
 
   const handleCardMouseLeave = () => {
@@ -197,6 +209,7 @@ export const ContentRail: React.FC<ContentRailProps> = ({
                   onHoverStart={() => handleCardMouseEnter(idx)}
                   onHoverEnd={handleCardMouseLeave}
                   isContinueWatching={isCW}
+                  cardSize={cardSize}
                 />
               </div>
             );

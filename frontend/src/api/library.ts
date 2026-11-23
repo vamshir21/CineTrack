@@ -1,5 +1,5 @@
 import client from './client';
-import type { Movie, TVSeries, HomeData, Episode, LibraryStats } from '../types';
+import type { Movie, TVSeries, HomeData, Episode, LibraryStats, MovieCollection, CollectionDetail } from '../types';
 
 export const libraryApi = {
   getMovies: async (): Promise<Movie[]> => {
@@ -96,5 +96,23 @@ export const libraryApi = {
     const { data } = await client.get('/api/library/stats');
     return data;
   },
+
+  getMoreLikeThis: async (mediaType: 'movie' | 'series' | 'tv', itemId: number, limit = 6): Promise<(Movie | TVSeries)[]> => {
+    const { data } = await client.get(`/api/library/more-like-this/${mediaType}/${itemId}`, {
+      params: { limit },
+    });
+    return data;
+  },
+
+  getCollections: async (): Promise<MovieCollection[]> => {
+    const { data } = await client.get('/api/library/collections');
+    return data;
+  },
+
+  getCollectionDetail: async (collectionId: number): Promise<CollectionDetail> => {
+    const { data } = await client.get(`/api/library/collections/${collectionId}`);
+    return data;
+  },
 };
+
 

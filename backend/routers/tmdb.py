@@ -237,3 +237,64 @@ def refresh_series(series_id: int, db: Session = Depends(get_db)):
                     db.add(ep)
     db.commit()
     return {"status": "refreshed"}
+
+
+@router.get("/upcoming")
+def get_upcoming_movies(page: int = 1):
+    """Fetch upcoming theatrical releases with countdown dates."""
+    return tmdb_service.get_upcoming_movies(page=page)
+
+
+@router.get("/now-playing")
+def get_now_playing_movies(page: int = 1):
+    """Fetch current theatrical releases."""
+    return tmdb_service.get_now_playing_movies(page=page)
+
+
+@router.get("/ott-releases")
+def get_ott_releases(page: int = 1):
+    """Fetch popular digital streaming releases with OTT platform tags."""
+    return tmdb_service.get_ott_releases(page=page)
+
+
+@router.get("/search-ott")
+def search_movies_ott(q: str = Query(...), page: int = 1):
+    """Search any movie across TMDB returning ratings, original languages, and streaming/rental OTT platforms."""
+    return tmdb_service.search_movies_with_providers(query=q, page=page)
+
+
+@router.get("/{media_type}/{tmdb_id}/credits")
+def get_tmdb_credits(media_type: str, tmdb_id: int):
+    """Fetch cast and crew for a movie or TV show by TMDB ID."""
+    if media_type not in ["movie", "tv", "series"]:
+        raise HTTPException(status_code=400, detail="Invalid media_type")
+    mt = "movie" if media_type == "movie" else "tv"
+    return tmdb_service.get_credits(mt, tmdb_id)
+
+
+@router.get("/{media_type}/{tmdb_id}/trailer")
+def get_tmdb_trailer(media_type: str, tmdb_id: int):
+    """Fetch YouTube trailer key and details for a movie or TV show by TMDB ID."""
+    if media_type not in ["movie", "tv", "series"]:
+        raise HTTPException(status_code=400, detail="Invalid media_type")
+    mt = "movie" if media_type == "movie" else "tv"
+    return tmdb_service.get_videos(mt, tmdb_id)
+
+
+@router.get("/{media_type}/{tmdb_id}/providers")
+def get_tmdb_watch_providers(media_type: str, tmdb_id: int):
+    """Fetch streaming and rental providers for a movie or TV show."""
+    if media_type not in ["movie", "tv", "series"]:
+        raise HTTPException(status_code=400, detail="Invalid media_type")
+    mt = "movie" if media_type == "movie" else "tv"
+    return tmdb_service.get_watch_providers(mt, tmdb_id)
+
+
+@router.get("/collection/{collection_id}")
+def get_collection_details(collection_id: int):
+    """Fetch franchise collection details from TMDB."""
+    coll = tmdb_service.get_collection(collection_id)
+    if not coll:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return coll
+

@@ -215,6 +215,34 @@ class TestDeletionAndStats(unittest.TestCase):
         db.commit()
         db.close()
 
+    def test_more_like_this(self):
+        """Test GET /api/library/more-like-this endpoint."""
+        db = SessionLocal()
+        m1 = db.query(Movie).first()
+        if m1:
+            res = self.client.get(f"/api/library/more-like-this/movie/{m1.id}")
+            self.assertEqual(res.status_code, 200)
+            self.assertIsInstance(res.json(), list)
+
+        s1 = db.query(TVSeries).first()
+        if s1:
+            res_s = self.client.get(f"/api/library/more-like-this/series/{s1.id}")
+            self.assertEqual(res_s.status_code, 200)
+            self.assertIsInstance(res_s.json(), list)
+
+        # Invalid type
+        res_inv = self.client.get("/api/library/more-like-this/invalid/1")
+        self.assertEqual(res_inv.status_code, 400)
+        db.close()
+
+    def test_tmdb_credits_and_trailer_validation(self):
+        """Test TMDB credits and trailer endpoint input validation."""
+        res_bad_credits = self.client.get("/api/tmdb/invalid/123/credits")
+        self.assertEqual(res_bad_credits.status_code, 400)
+
+        res_bad_trailer = self.client.get("/api/tmdb/invalid/123/trailer")
+        self.assertEqual(res_bad_trailer.status_code, 400)
+
 
 if __name__ == "__main__":
     unittest.main()

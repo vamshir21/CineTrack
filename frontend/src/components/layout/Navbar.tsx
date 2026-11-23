@@ -60,6 +60,9 @@ export function Navbar({ onOpenPlaySomething, onOpenShortcuts }: NavbarProps = {
         <NavLink to="/movies" className={navLinkClass}>
           Movies
         </NavLink>
+        <NavLink to="/upcoming" className={navLinkClass}>
+          Upcoming
+        </NavLink>
         <NavLink to="/library" className={navLinkClass}>
           My Library
         </NavLink>

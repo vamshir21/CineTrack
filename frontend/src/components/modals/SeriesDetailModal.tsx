@@ -1,32 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Plus, Check, Star, Clock, Sparkles, Trash2, CheckCircle2, CheckCheck } from 'lucide-react';
+import { X, Play, Plus, Check, Star, Clock, Sparkles, Trash2, CheckCircle2, CheckCheck, Film } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { libraryApi } from '../../api/library';
 import { watchlistApi } from '../../api/watchlist';
+import { tmdbApi } from '../../api/tmdb';
 import type { TVSeries, Episode, Season } from '../../types';
 import { ImageWithFallback } from '../common/ImageWithFallback';
 import { ProgressBar } from '../cards/ProgressBar';
 import { formatYear, formatRuntime } from '../../utils/timeUtils';
 import { extractMediaSpecs } from '../../utils/mediaBadgeUtils';
+import { getLanguageBadgeStyle } from '../../utils/languageUtils';
 import { TMDBMatchModal } from './TMDBMatchModal';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { CastRail } from '../common/CastRail';
+import { MoreLikeThisGrid } from '../common/MoreLikeThisGrid';
+import { TrailerPlayer } from '../common/TrailerPlayer';
 
 interface SeriesDetailModalProps {
   series: TVSeries | null;
   onClose: () => void;
   onPlayEpisode: (episode: Episode) => void;
+  onSelectSeries?: (series: TVSeries) => void;
 }
 
 export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
   series,
   onClose,
   onPlayEpisode,
+  onSelectSeries,
 }) => {
   const queryClient = useQueryClient();
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [showSeriesDeleteModal, setShowSeriesDeleteModal] = useState(false);
+  const [showTrailer, setShowTrailer] = useState(false);
   const [episodeToDelete, setEpisodeToDelete] = useState<Episode | null>(null);
 
   // Fetch full series details with seasons
@@ -36,11 +44,36 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
     enabled: !!series,
   });
 
+  const displayData = fullSeries || series;
+
   // Watchlist status
   const { data: watchlistStatus } = useQuery({
     queryKey: ['watchlist-check', 'series', series?.id],
     queryFn: () => (series ? watchlistApi.checkWatchlist('series', series.id) : { in_watchlist: false }),
     enabled: !!series,
+  });
+
+  // Cast & Crew from TMDB
+  const { data: creditsData } = useQuery({
+    queryKey: ['credits', 'tv', displayData?.tmdb_id],
+    queryFn: () => (displayData?.tmdb_id ? tmdbApi.getCredits('tv', displayData.tmdb_id) : null),
+    enabled: !!displayData?.tmdb_id,
+    staleTime: 1000 * 60 * 60,
+  });
+
+  // Official Trailer from TMDB
+  const { data: trailerData } = useQuery({
+    queryKey: ['trailer', 'tv', displayData?.tmdb_id],
+    queryFn: () => (displayData?.tmdb_id ? tmdbApi.getTrailer('tv', displayData.tmdb_id) : null),
+    enabled: !!displayData?.tmdb_id,
+    staleTime: 1000 * 60 * 60,
+  });
+
+  // More Like This from Local Library
+  const { data: moreLikeThisData } = useQuery({
+    queryKey: ['more-like-this', 'series', displayData?.id],
+    queryFn: () => (displayData?.id ? libraryApi.getMoreLikeThis('series', displayData.id, 6) : []),
+    enabled: !!displayData?.id,
   });
 
   // Fetch episodes for selected season
@@ -147,15 +180,15 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
     queryClient.invalidateQueries({ queryKey: ['stats'] });
   };
 
-  if (!series) return null;
+  if (!series || !displayData) return null;
 
-  const displayData = fullSeries || series;
   const seasons = ('seasons' in displayData ? (displayData as any).seasons : []) as Season[];
   const selectedSeasonObj = seasons.find((s) => s.season_number === selectedSeason);
   const backdrop = displayData.backdrop_path || displayData.poster_path;
   const year = formatYear(displayData.first_air_date || '');
   const rating = displayData.vote_average ? displayData.vote_average.toFixed(1) : null;
   const genres = displayData.genres?.join(' • ');
+  const trailerKey = trailerData?.trailer?.key;
 
   // Find first unwatched or in-progress episode
   const firstEpisodeToPlay = episodes && episodes.length > 0 ? episodes[0] : null;
@@ -176,25 +209,46 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-30 p-2 bg-[#181818]/70 hover:bg-[#181818] text-white rounded-full transition-colors border border-white/20"
+            className="absolute top-4 right-4 z-40 p-2 bg-[#181818]/70 hover:bg-[#181818] text-white rounded-full transition-colors border border-white/20"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
 
           {/* Modal Header Banner */}
-          <div className="relative w-full h-[320px] md:h-[400px] shrink-0 bg-neutral-900">
-            <ImageWithFallback
-              src={backdrop}
-              alt={displayData.title}
-              className="w-full h-full object-cover object-top"
-            />
-            {/* Gradients */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-[#181818]/40 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#181818]/90 via-transparent to-transparent w-2/3" />
+          <div className="relative w-full h-[340px] md:h-[420px] shrink-0 bg-neutral-900 overflow-hidden">
+            {showTrailer && trailerKey ? (
+              <div className="relative w-full h-full">
+                <TrailerPlayer
+                  videoKey={trailerKey}
+                  autoPlay={true}
+                  muted={false}
+                  controls={true}
+                  className="w-full h-full"
+                />
+                <button
+                  onClick={() => setShowTrailer(false)}
+                  className="absolute top-4 left-4 z-40 px-3 py-1.5 rounded-full bg-black/80 hover:bg-black text-white text-xs font-semibold border border-white/20 flex items-center gap-1.5 backdrop-blur-sm transition-all"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Exit Trailer</span>
+                </button>
+              </div>
+            ) : (
+              <>
+                <ImageWithFallback
+                  src={backdrop}
+                  alt={displayData.title}
+                  className="w-full h-full object-cover object-top"
+                />
+                {/* Gradients */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#181818] via-[#181818]/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#181818]/90 via-transparent to-transparent w-2/3" />
+              </>
+            )}
 
             {/* Banner Content */}
-            <div className="absolute bottom-6 left-6 md:left-10 right-6 z-20 space-y-3">
+            <div className="absolute bottom-6 left-6 md:left-10 right-6 z-30 space-y-3 pointer-events-auto">
               <h1 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-lg">
                 {displayData.title}
               </h1>
@@ -208,6 +262,21 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
                   >
                     <Play className="w-4 h-4 fill-black" />
                     <span>Play S{selectedSeason} E1</span>
+                  </button>
+                )}
+
+                {trailerKey && (
+                  <button
+                    onClick={() => setShowTrailer(!showTrailer)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded border transition-colors text-sm font-semibold shadow-md active:scale-95 ${
+                      showTrailer
+                        ? 'bg-netflix text-white border-netflix'
+                        : 'bg-neutral-800/80 hover:bg-neutral-700 text-white border-white/20'
+                    }`}
+                    title={showTrailer ? 'Close Trailer' : 'Watch Official Trailer'}
+                  >
+                    <Film className="w-4 h-4 text-netflix" />
+                    <span>{showTrailer ? 'Hide Trailer' : 'Trailer'}</span>
                   </button>
                 )}
 
@@ -266,7 +335,7 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
           </div>
 
           {/* Modal Body / Scrollable Content */}
-          <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6 space-y-6">
+          <div className="flex-1 overflow-y-auto px-6 md:px-10 py-6 space-y-8">
             {/* Metadata & Synopsis */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2 space-y-3">
@@ -283,6 +352,22 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
                       {displayData.number_of_seasons} Season{displayData.number_of_seasons > 1 ? 's' : ''}
                     </span>
                   )}
+                  {/* Languages */}
+                  {displayData.languages && displayData.languages.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      {displayData.languages.map((lang) => {
+                        const style = getLanguageBadgeStyle(lang);
+                        return (
+                          <span
+                            key={lang}
+                            className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${style.bg} ${style.text} ${style.border}`}
+                          >
+                            {lang}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <p className="text-neutral-200 text-sm md:text-base leading-relaxed">
@@ -298,6 +383,12 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
                     <span className="text-neutral-200">{genres}</span>
                   </div>
                 )}
+                {displayData.languages && displayData.languages.length > 0 && (
+                  <div>
+                    <span className="text-neutral-500 font-semibold">Audio: </span>
+                    <span className="text-neutral-200">{displayData.languages.join(', ')}</span>
+                  </div>
+                )}
                 {displayData.tmdb_id && (
                   <div>
                     <span className="text-neutral-500 font-semibold">TMDB ID: </span>
@@ -306,6 +397,11 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Cast & Crew Rail */}
+            {creditsData && (
+              <CastRail cast={creditsData.cast} crew={creditsData.crew} />
+            )}
 
             {/* Divider */}
             <hr className="border-neutral-800" />
@@ -452,6 +548,18 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
                 </div>
               )}
             </div>
+
+            {/* More Like This (Local Library Recommendations) */}
+            {moreLikeThisData && moreLikeThisData.length > 0 && (
+              <MoreLikeThisGrid
+                items={moreLikeThisData}
+                onSelect={(item) => {
+                  if (onSelectSeries) {
+                    onSelectSeries(item as TVSeries);
+                  }
+                }}
+              />
+            )}
           </div>
         </motion.div>
       </div>

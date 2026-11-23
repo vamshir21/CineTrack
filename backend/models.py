@@ -36,6 +36,8 @@ class Movie(Base):
     vote_average: Mapped[float | None] = mapped_column(Float, nullable=True)
     added_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now)
     file_size: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    collection_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    collection_name: Mapped[str | None] = mapped_column(String, nullable=True)
 
     @property
     def genres_list(self):

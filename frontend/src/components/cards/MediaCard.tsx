@@ -6,10 +6,12 @@ import { ProgressBar } from './ProgressBar';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { watchlistApi } from '../../api/watchlist';
 import { playbackApi } from '../../api/playback';
+import { settingsApi } from '../../api/settings';
 import type { Movie, TVSeries } from '../../types';
 import { isMovie } from '../../types';
 import { formatYear, formatRuntime } from '../../utils/timeUtils';
 import { extractMediaSpecs } from '../../utils/mediaBadgeUtils';
+import { getLanguageBadgeStyle } from '../../utils/languageUtils';
 
 export interface MediaCardProps {
   item: Movie | TVSeries;
@@ -26,6 +28,7 @@ export interface MediaCardProps {
   // Continue watching removal
   isContinueWatching?: boolean;
   onRemoveFromContinueWatching?: () => void;
+  cardSize?: 'small' | 'medium' | 'large';
 }
 
 export const MediaCard: React.FC<MediaCardProps> = ({
@@ -41,6 +44,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   onHoverEnd,
   isContinueWatching = false,
   onRemoveFromContinueWatching,
+  cardSize = 'medium',
 }) => {
   const queryClient = useQueryClient();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -111,10 +115,18 @@ export const MediaCard: React.FC<MediaCardProps> = ({
     },
   });
 
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: settingsApi.getSettings,
+  });
+  const hoverEnabled = settings?.hover_preview_enabled !== 'false';
+  const hoverDelay = Number(settings?.hover_delay_ms) || 500;
+
   const handleMouseEnter = () => {
     if (isControlledHover) {
       onHoverStart?.();
     } else {
+      if (!hoverEnabled) return;
       localTimeoutRef.current = setTimeout(() => {
         if (cardRef.current) {
           const rect = cardRef.current.getBoundingClientRect();
@@ -123,7 +135,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
           else setLocalOrigin('center');
         }
         setLocalHovered(true);
-      }, 350);
+      }, hoverDelay);
     }
   };
 
@@ -142,8 +154,12 @@ export const MediaCard: React.FC<MediaCardProps> = ({
     };
   }, []);
 
-  const baseWidth = isPoster ? 200 : 295;
-  const expandedWidth = isPoster ? 315 : 385;
+  const baseWidth = isPoster
+    ? (cardSize === 'small' ? 170 : cardSize === 'large' ? 230 : 200)
+    : (cardSize === 'small' ? 250 : cardSize === 'large' ? 335 : 295);
+  const expandedWidth = isPoster
+    ? (cardSize === 'small' ? 275 : cardSize === 'large' ? 355 : 315)
+    : (cardSize === 'small' ? 335 : cardSize === 'large' ? 435 : 385);
   const centerOffset = Math.round((baseWidth - expandedWidth) / 2);
 
   // Resolve expansion position
@@ -181,6 +197,23 @@ export const MediaCard: React.FC<MediaCardProps> = ({
         {isUpNext && (
           <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-netflix text-white text-[10px] font-bold uppercase tracking-wider shadow-md z-20 pointer-events-none">
             Up Next
+          </div>
+        )}
+
+        {/* Language Badge */}
+        {item.languages && item.languages.length > 0 && !isUpNext && (
+          <div className="absolute top-2 left-2 flex items-center gap-1 z-20 pointer-events-none">
+            {item.languages.slice(0, 2).map((lang) => {
+              const style = getLanguageBadgeStyle(lang);
+              return (
+                <span
+                  key={lang}
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider backdrop-blur-md border shadow-md ${style.bg} ${style.text} ${style.border}`}
+                >
+                  {lang}
+                </span>
+              );
+            })}
           </div>
         )}
 
@@ -344,6 +377,22 @@ export const MediaCard: React.FC<MediaCardProps> = ({
                   <span className="text-[10px] font-bold border border-amber-500/70 px-1 rounded text-amber-300">
                     HDR
                   </span>
+                )}
+                {/* Languages */}
+                {item.languages && item.languages.length > 0 && (
+                  <div className="flex items-center gap-1">
+                    {item.languages.map((lang) => {
+                      const style = getLanguageBadgeStyle(lang);
+                      return (
+                        <span
+                          key={lang}
+                          className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${style.bg} ${style.text} ${style.border}`}
+                        >
+                          {lang}
+                        </span>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
 

@@ -5,8 +5,10 @@ import { libraryApi } from '../api/library';
 import { playbackApi } from '../api/playback';
 import { HeroSection } from '../components/hero/HeroSection';
 import { ContentRail } from '../components/rails/ContentRail';
+import { CollectionRail } from '../components/rails/CollectionRail';
 import { SeriesDetailModal } from '../components/modals/SeriesDetailModal';
 import { MovieDetailModal } from '../components/modals/MovieDetailModal';
+import { CollectionDetailModal } from '../components/modals/CollectionDetailModal';
 import { usePlaybackStore } from '../store/playbackStore';
 import type { MediaItem, Movie, TVSeries, Episode } from '../types';
 import { isMovie } from '../types';
@@ -16,12 +18,19 @@ export const HomePage: React.FC = () => {
   const { onOpenPlaySomething } = useOutletContext<{ onOpenPlaySomething?: () => void }>() || {};
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [selectedSeries, setSelectedSeries] = useState<TVSeries | null>(null);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
   const { setPlayerOpen } = usePlaybackStore();
 
   const { data: homeData, isLoading, error } = useQuery({
     queryKey: ['home'],
     queryFn: libraryApi.getHome,
     refetchInterval: 3000,
+  });
+
+  const { data: collections } = useQuery({
+    queryKey: ['library-collections'],
+    queryFn: libraryApi.getCollections,
+    staleTime: 1000 * 60 * 5,
   });
 
   const handlePlayMedia = async (item: MediaItem) => {
@@ -124,6 +133,16 @@ export const HomePage: React.FC = () => {
           />
         )}
 
+        {/* Franchise & Movie Collections Binge Rail */}
+        {collections && collections.length > 0 && (
+          <CollectionRail
+            title="Franchises & Movie Sagas"
+            subtitle="Binge full sagas in chronological watch order"
+            collections={collections}
+            onSelectCollection={(cid) => setSelectedCollectionId(cid)}
+          />
+        )}
+
         {/* Top 10 Rail */}
         {rails.popular_movies && rails.popular_movies.length >= 3 && (
           <ContentRail
@@ -176,6 +195,7 @@ export const HomePage: React.FC = () => {
           series={selectedSeries}
           onClose={() => setSelectedSeries(null)}
           onPlayEpisode={handlePlayEpisode}
+          onSelectSeries={(s) => setSelectedSeries(s)}
         />
       )}
 
@@ -187,6 +207,23 @@ export const HomePage: React.FC = () => {
           onPlay={(m) => {
             setSelectedMovie(null);
             handlePlayMedia(m);
+          }}
+          onSelectMovie={(m) => setSelectedMovie(m)}
+        />
+      )}
+
+      {/* Franchise & Collection Detail Modal */}
+      {selectedCollectionId && (
+        <CollectionDetailModal
+          collectionId={selectedCollectionId}
+          onClose={() => setSelectedCollectionId(null)}
+          onPlayMovie={(m) => {
+            setSelectedCollectionId(null);
+            handlePlayMedia(m);
+          }}
+          onSelectMovie={(m) => {
+            setSelectedCollectionId(null);
+            setSelectedMovie(m);
           }}
         />
       )}

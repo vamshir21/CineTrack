@@ -4,6 +4,7 @@ import { Layout } from './components/layout/Layout';
 import { HomePage } from './pages/HomePage';
 import { MoviesPage } from './pages/MoviesPage';
 import { TVShowsPage } from './pages/TVShowsPage';
+import { UpcomingPage } from './pages/UpcomingPage';
 import { LibraryPage } from './pages/LibraryPage';
 import { WatchlistPage } from './pages/WatchlistPage';
 import { SearchPage } from './pages/SearchPage';
@@ -28,6 +29,7 @@ export function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/tv" element={<TVShowsPage />} />
             <Route path="/movies" element={<MoviesPage />} />
+            <Route path="/upcoming" element={<UpcomingPage />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/watchlist" element={<WatchlistPage />} />
             <Route path="/search" element={<SearchPage />} />

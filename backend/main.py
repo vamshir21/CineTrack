@@ -6,7 +6,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -101,6 +101,8 @@ if os.path.exists(assets_dir):
 
 @app.get("/{full_path:path}")
 def serve_frontend(full_path: str):
+    if full_path.startswith("api/") or full_path == "api":
+        raise HTTPException(status_code=404, detail="API endpoint not found")
     file_path = os.path.join(frontend_dist, full_path)
     if full_path and os.path.isfile(file_path):
         return FileResponse(file_path)
