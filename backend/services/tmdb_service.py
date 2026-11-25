@@ -606,3 +606,63 @@ def sync_local_movie_collections(db) -> int:
     return updated
 
 
+def get_person_details(person_id: int) -> dict | None:
+    """Fetch person biographical information."""
+    data = _get(f"/person/{person_id}")
+    if not data:
+        return None
+    return {
+        "id": data["id"],
+        "name": data.get("name"),
+        "biography": data.get("biography"),
+        "birthday": data.get("birthday"),
+        "deathday": data.get("deathday"),
+        "place_of_birth": data.get("place_of_birth"),
+        "known_for_department": data.get("known_for_department"),
+        "profile_url": get_image_url(data.get("profile_path"), "w500"),
+    }
+
+
+def get_person_credits(person_id: int) -> dict:
+    """Fetch combined credits (acting and crew) for a person."""
+    data = _get(f"/person/{person_id}/combined_credits")
+    if not data:
+        return {"cast": [], "crew": []}
+
+    def _fmt(item, role_key):
+        is_movie = item.get("media_type") == "movie"
+        release = item.get("release_date") if is_movie else item.get("first_air_date")
+        return {
+            "id": item["id"],
+            "title": item.get("title") or item.get("name") or "Untitled",
+            "media_type": item.get("media_type", "movie"),
+            "release_date": release or "",
+            "vote_average": round(item.get("vote_average", 0), 1) if item.get("vote_average") else None,
+            "role": item.get(role_key) or "",
+            "poster_url": get_image_url(item.get("poster_path"), "w500"),
+            "backdrop_url": get_image_url(item.get("backdrop_path"), "w1280"),
+            "popularity": item.get("popularity", 0),
+        }
+
+    cast = [_fmt(c, "character") for c in data.get("cast", [])]
+    crew = [_fmt(c, "job") for c in data.get("crew", [])]
+
+    # Deduplicate by id and sort by popularity
+    seen_cast = set()
+    unique_cast = []
+    for c in sorted(cast, key=lambda x: x["popularity"], reverse=True):
+        if c["id"] not in seen_cast:
+            seen_cast.add(c["id"])
+            unique_cast.append(c)
+
+    seen_crew = set()
+    unique_crew = []
+    for c in sorted(crew, key=lambda x: x["popularity"], reverse=True):
+        if c["id"] not in seen_crew:
+            seen_crew.add(c["id"])
+            unique_crew.append(c)
+
+    return {"cast": unique_cast, "crew": unique_crew}
+
+
+

@@ -298,3 +298,14 @@ def get_collection_details(collection_id: int):
         raise HTTPException(status_code=404, detail="Collection not found")
     return coll
 
+
+@router.get("/{media_type}/{tmdb_id}/ratings")
+def get_multisource_ratings(media_type: str, tmdb_id: int, db: Session = Depends(get_db)):
+    """Fetch IMDb, Rotten Tomatoes (Critic & Audience), Metascore, and TMDB ratings."""
+    if media_type not in ["movie", "tv", "series"]:
+        raise HTTPException(status_code=400, detail="Invalid media_type")
+    mt = "movie" if media_type == "movie" else "tv"
+    from backend.services import ratings_service
+    return ratings_service.get_media_ratings(mt, tmdb_id, db=db)
+
+

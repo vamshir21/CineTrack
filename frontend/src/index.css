@@ -62,3 +62,192 @@ button:focus-visible {
   outline: 2px solid #E50914;
   outline-offset: 2px;
 }
+
+/* ==========================================================================
+   Light Mode Theme Styles
+   Activated via html.light or [data-theme="light"]
+   ========================================================================== */
+html.light,
+html.light body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html.light .bg-\[\#141414\],
+html.light .bg-background {
+  background-color: #f8fafc !important;
+}
+
+html.light .bg-\[\#181818\],
+html.light .bg-\[\#1c1c1c\],
+html.light .bg-surface {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .bg-\[\#222\],
+html.light .bg-\[\#2a2a2a\],
+html.light .bg-\[\#1f1f1f\],
+html.light .bg-neutral-900,
+html.light .bg-neutral-950 {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .border-neutral-800,
+html.light .border-neutral-700,
+html.light .border-neutral-600 {
+  border-color: #e2e8f0 !important;
+}
+
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-neutral-200,
+html.light .text-neutral-300 {
+  color: #334155 !important;
+}
+
+html.light .text-neutral-400,
+html.light .text-neutral-500 {
+  color: #64748b !important;
+}
+
+/* Form Controls in Light Mode */
+html.light input,
+html.light select,
+html.light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Navbar in Light Mode */
+html.light nav {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+  color: #0f172a !important;
+}
+
+html.light nav a {
+  color: #475569 !important;
+}
+
+html.light nav a.text-white,
+html.light nav a:hover {
+  color: #0f172a !important;
+}
+
+/* Secondary Buttons in Light Mode */
+html.light .bg-neutral-800,
+html.light .bg-neutral-800\/80,
+html.light .bg-neutral-800\/90 {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light .hover\:bg-neutral-700:hover,
+html.light .hover\:bg-neutral-800:hover {
+  background-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* Modals & Popups in Light Mode */
+html.light [role="dialog"],
+html.light .modal-container {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Hero Banner in Light Mode: Maintain white text over photographic backdrops */
+html.light .hero-container,
+html.light .hero-container h1,
+html.light .hero-container p,
+html.light .hero-container span:not(.text-black) {
+  color: #ffffff !important;
+}
+
+html.light .hero-container button.bg-white,
+html.light .hero-container button.bg-white span,
+html.light .hero-container button.bg-white svg {
+  color: #000000 !important;
+  fill: #000000 !important;
+}
+
+html.light .hero-container .bg-neutral-900 {
+  background-color: rgba(20, 20, 20, 0.85) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+html.light .hero-container .bg-neutral-900 span {
+  color: #ffffff !important;
+}
+
+html.light .hero-container .bg-neutral-900 .text-red-400 {
+  color: #f87171 !important;
+}
+
+html.light .hero-container .bg-neutral-900 .text-emerald-400 {
+  color: #34d399 !important;
+}
+
+html.light .hero-container .bg-neutral-900 .text-amber-400 {
+  color: #fbbf24 !important;
+}
+
+html.light .hero-container .text-neutral-400 {
+  color: #d1d5db !important;
+}
+
+html.light .hero-container .text-neutral-300 {
+  color: #e5e7eb !important;
+}
+
+html.light .hero-container .text-neutral-200 {
+  color: #f3f4f6 !important;
+}
+
+html.light .hero-container .bg-neutral-800\/80 {
+  background-color: rgba(24, 24, 24, 0.8) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+html.light .hero-container .from-\[\#141414\] {
+  --tw-gradient-from: #f8fafc var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(248 250 252 / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+/* Navbar Play Something & Pills in Light Mode */
+html.light nav .bg-\[\#222\]\/90,
+html.light .bg-\[\#222\]\/90 {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light nav .bg-\[\#222\]\/90 span {
+  color: #0f172a !important;
+}
+
+/* Card title overlays on dark media posters/backdrops */
+html.light .card-title-overlay p,
+html.light .card-title-overlay span,
+html.light .media-card .bg-gradient-to-t p,
+html.light .media-card .bg-gradient-to-t span {
+  color: #ffffff !important;
+}
+

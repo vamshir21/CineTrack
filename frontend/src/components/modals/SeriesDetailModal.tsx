@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Plus, Check, Star, Clock, Sparkles, Trash2, CheckCircle2, CheckCheck, Film } from 'lucide-react';
+import { X, Play, Plus, Check, Clock, Sparkles, Trash2, CheckCircle2, CheckCheck, Film } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { libraryApi } from '../../api/library';
 import { watchlistApi } from '../../api/watchlist';
@@ -16,6 +16,8 @@ import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { CastRail } from '../common/CastRail';
 import { MoreLikeThisGrid } from '../common/MoreLikeThisGrid';
 import { TrailerPlayer } from '../common/TrailerPlayer';
+import { RatingBadges } from '../common/RatingBadges';
+import { PersonDetailModal } from './PersonDetailModal';
 
 interface SeriesDetailModalProps {
   series: TVSeries | null;
@@ -36,6 +38,7 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
   const [showSeriesDeleteModal, setShowSeriesDeleteModal] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
   const [episodeToDelete, setEpisodeToDelete] = useState<Episode | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<{ id: number; name: string } | null>(null);
 
   // Fetch full series details with seasons
   const { data: fullSeries } = useQuery({
@@ -45,6 +48,14 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
   });
 
   const displayData = fullSeries || series;
+
+  // Rotten Tomatoes & IMDb Ratings
+  const { data: ratingsData } = useQuery({
+    queryKey: ['ratings', 'tv', displayData?.tmdb_id],
+    queryFn: () => (displayData?.tmdb_id ? tmdbApi.getRatings('tv', displayData.tmdb_id) : null),
+    enabled: !!displayData?.tmdb_id,
+    staleTime: 1000 * 60 * 60,
+  });
 
   // Watchlist status
   const { data: watchlistStatus } = useQuery({
@@ -186,7 +197,6 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
   const selectedSeasonObj = seasons.find((s) => s.season_number === selectedSeason);
   const backdrop = displayData.backdrop_path || displayData.poster_path;
   const year = formatYear(displayData.first_air_date || '');
-  const rating = displayData.vote_average ? displayData.vote_average.toFixed(1) : null;
   const genres = displayData.genres?.join(' • ');
   const trailerKey = trailerData?.trailer?.key;
 
@@ -340,12 +350,7 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2 space-y-3">
                 <div className="flex flex-wrap items-center gap-3 text-sm text-neutral-300">
-                  {rating && (
-                    <span className="flex items-center gap-1 text-green-400 font-bold">
-                      <Star className="w-4 h-4 fill-current" />
-                      {rating}
-                    </span>
-                  )}
+                  <RatingBadges ratings={ratingsData} tmdbFallback={displayData.vote_average} />
                   {year && <span>{year}</span>}
                   {displayData.number_of_seasons && (
                     <span className="border border-neutral-600 px-1.5 py-0.5 rounded text-xs">
@@ -400,7 +405,11 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
 
             {/* Cast & Crew Rail */}
             {creditsData && (
-              <CastRail cast={creditsData.cast} crew={creditsData.crew} />
+              <CastRail
+                cast={creditsData.cast}
+                crew={creditsData.crew}
+                onSelectPerson={(id, name) => setSelectedPerson({ id, name })}
+              />
             )}
 
             {/* Divider */}
@@ -599,6 +608,19 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
           fileSize={episodeToDelete.file_size}
           seasonNumber={episodeToDelete.season_number}
           episodeNumber={episodeToDelete.episode_number}
+        />
+      )}
+
+      {selectedPerson && (
+        <PersonDetailModal
+          personId={selectedPerson.id}
+          personName={selectedPerson.name}
+          onClose={() => setSelectedPerson(null)}
+          onPlayMovie={() => {}}
+          onSelectSeries={(s) => {
+            setSelectedPerson(null);
+            if (onSelectSeries) onSelectSeries(s);
+          }}
         />
       )}
     </AnimatePresence>

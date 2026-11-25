@@ -6,9 +6,11 @@ import { playbackApi } from '../api/playback';
 import { HeroSection } from '../components/hero/HeroSection';
 import { ContentRail } from '../components/rails/ContentRail';
 import { CollectionRail } from '../components/rails/CollectionRail';
+import { VibeSelector } from '../components/vibe/VibeSelector';
 import { SeriesDetailModal } from '../components/modals/SeriesDetailModal';
 import { MovieDetailModal } from '../components/modals/MovieDetailModal';
 import { CollectionDetailModal } from '../components/modals/CollectionDetailModal';
+import { VibeSurpriseModal } from '../components/modals/VibeSurpriseModal';
 import { usePlaybackStore } from '../store/playbackStore';
 import type { MediaItem, Movie, TVSeries, Episode } from '../types';
 import { isMovie } from '../types';
@@ -19,6 +21,8 @@ export const HomePage: React.FC = () => {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [selectedSeries, setSelectedSeries] = useState<TVSeries | null>(null);
   const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
+  const [vibeSurpriseOpen, setVibeSurpriseOpen] = useState(false);
+  const [surpriseVibeKey, setSurpriseVibeKey] = useState<string | null>(null);
   const { setPlayerOpen } = usePlaybackStore();
 
   const { data: homeData, isLoading, error } = useQuery({
@@ -143,6 +147,16 @@ export const HomePage: React.FC = () => {
           />
         )}
 
+        {/* Surprise Me by Vibe & Mood Selector */}
+        <VibeSelector
+          onItemClick={handleItemClick}
+          onPlay={handlePlayMedia}
+          onOpenSurprise={(vibeKey) => {
+            setSurpriseVibeKey(vibeKey || null);
+            setVibeSurpriseOpen(true);
+          }}
+        />
+
         {/* Top 10 Rail */}
         {rails.popular_movies && rails.popular_movies.length >= 3 && (
           <ContentRail
@@ -228,6 +242,20 @@ export const HomePage: React.FC = () => {
         />
       )}
 
+      {/* Surprise Me by Vibe Randomizer Modal */}
+      <VibeSurpriseModal
+        isOpen={vibeSurpriseOpen}
+        initialVibeKey={surpriseVibeKey}
+        onClose={() => setVibeSurpriseOpen(false)}
+        onPlay={(item) => {
+          setVibeSurpriseOpen(false);
+          handlePlayMedia(item);
+        }}
+        onSelectMedia={(item) => {
+          setVibeSurpriseOpen(false);
+          handleItemClick(item);
+        }}
+      />
     </div>
   );
 };

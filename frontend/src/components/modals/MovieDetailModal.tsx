@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Plus, Check, Star, Clock, Sparkles, Trash2, CheckCircle2, Film } from 'lucide-react';
+import { X, Play, Plus, Check, Clock, Sparkles, Trash2, CheckCircle2, Film } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { watchlistApi } from '../../api/watchlist';
 import { libraryApi } from '../../api/library';
@@ -16,6 +16,8 @@ import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { CastRail } from '../common/CastRail';
 import { MoreLikeThisGrid } from '../common/MoreLikeThisGrid';
 import { TrailerPlayer } from '../common/TrailerPlayer';
+import { RatingBadges } from '../common/RatingBadges';
+import { PersonDetailModal } from './PersonDetailModal';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -34,6 +36,15 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState<{ id: number; name: string } | null>(null);
+
+  // Rotten Tomatoes & IMDb Ratings
+  const { data: ratingsData } = useQuery({
+    queryKey: ['ratings', 'movie', movie?.tmdb_id],
+    queryFn: () => (movie?.tmdb_id ? tmdbApi.getRatings('movie', movie.tmdb_id) : null),
+    enabled: !!movie?.tmdb_id,
+    staleTime: 1000 * 60 * 60,
+  });
 
   // Watchlist status
   const { data: watchlistStatus } = useQuery({
@@ -115,7 +126,6 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
   const backdrop = movie.backdrop_path || movie.poster_path;
   const year = formatYear(movie.release_date || '');
-  const rating = movie.vote_average ? movie.vote_average.toFixed(1) : null;
   const genres = movie.genres?.join(' • ');
   const hasProgress = movie.progress && movie.progress.position > 0 && !movie.progress.completed;
   const specs = extractMediaSpecs(movie.file_path, movie.runtime || undefined);
@@ -261,12 +271,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             {/* Meta badges & synopsis */}
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-300">
-                {rating && (
-                  <span className="flex items-center gap-1 text-green-400 font-bold">
-                    <Star className="w-4 h-4 fill-current" />
-                    {rating}
-                  </span>
-                )}
+                <RatingBadges ratings={ratingsData} tmdbFallback={movie.vote_average} />
                 {year && <span>{year}</span>}
                 {movie.runtime && (
                   <span className="flex items-center gap-1">
@@ -331,7 +336,11 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
             {/* Cast & Crew Rail */}
             {creditsData && (
-              <CastRail cast={creditsData.cast} crew={creditsData.crew} />
+              <CastRail
+                cast={creditsData.cast}
+                crew={creditsData.crew}
+                onSelectPerson={(id, name) => setSelectedPerson({ id, name })}
+              />
             )}
 
             {/* More Like This (Local Library Recommendations) */}
@@ -386,6 +395,23 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           mediaType="movie"
           filePath={movie.file_path}
           fileSize={movie.file_size}
+        />
+      )}
+
+      {selectedPerson && (
+        <PersonDetailModal
+          personId={selectedPerson.id}
+          personName={selectedPerson.name}
+          onClose={() => setSelectedPerson(null)}
+          onPlayMovie={(m) => {
+            setSelectedPerson(null);
+            onPlay(m);
+          }}
+          onSelectMovie={(m) => {
+            setSelectedPerson(null);
+            if (onSelectMovie) onSelectMovie(m);
+            else onPlay(m);
+          }}
         />
       )}
     </AnimatePresence>

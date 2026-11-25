@@ -1,5 +1,5 @@
 import client from './client';
-import type { CreditsData, TrailerData, UpcomingMovie, WatchProvider, CollectionDetail } from '../types';
+import type { CreditsData, TrailerData, UpcomingMovie, WatchProvider, CollectionDetail, MultiSourceRatings } from '../types';
 
 export const tmdbApi = {
   getCredits: async (mediaType: 'movie' | 'tv' | 'series', tmdbId: number): Promise<CreditsData> => {
@@ -11,6 +11,12 @@ export const tmdbApi = {
   getTrailer: async (mediaType: 'movie' | 'tv' | 'series', tmdbId: number): Promise<TrailerData> => {
     const mt = mediaType === 'movie' ? 'movie' : 'tv';
     const { data } = await client.get(`/api/tmdb/${mt}/${tmdbId}/trailer`);
+    return data;
+  },
+
+  getRatings: async (mediaType: 'movie' | 'tv' | 'series', tmdbId: number): Promise<MultiSourceRatings> => {
+    const mt = mediaType === 'movie' ? 'movie' : 'tv';
+    const { data } = await client.get(`/api/tmdb/${mt}/${tmdbId}/ratings`);
     return data;
   },
 

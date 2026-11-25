@@ -6,9 +6,10 @@ import { ImageWithFallback } from './ImageWithFallback';
 interface CastRailProps {
   cast?: CastMember[];
   crew?: CrewMember[];
+  onSelectPerson?: (personId: number, personName: string) => void;
 }
 
-export const CastRail: React.FC<CastRailProps> = ({ cast = [], crew = [] }) => {
+export const CastRail: React.FC<CastRailProps> = ({ cast = [], crew = [], onSelectPerson }) => {
   const castScrollRef = useRef<HTMLDivElement>(null);
   const crewScrollRef = useRef<HTMLDivElement>(null);
 
@@ -133,10 +134,14 @@ export const CastRail: React.FC<CastRailProps> = ({ cast = [], crew = [] }) => {
               onScroll={updateCastScroll}
               className="flex items-start gap-4 overflow-x-auto pb-3 pt-1 scroll-smooth scrollbar-thin scrollbar-thumb-neutral-700 scrollbar-track-transparent select-none"
             >
-              {cast.map((actor) => (
+              {cast.map((actor, idx) => (
                 <div
-                  key={`${actor.id}-${actor.character || actor.name}`}
-                  className="flex-shrink-0 w-24 sm:w-28 flex flex-col items-center text-center group"
+                  key={`${actor.id}-${actor.character || actor.name}-${idx}`}
+                  onClick={() => onSelectPerson?.(actor.id, actor.name)}
+                  className={`flex-shrink-0 w-24 sm:w-28 flex flex-col items-center text-center group ${
+                    onSelectPerson ? 'cursor-pointer' : ''
+                  }`}
+                  title={onSelectPerson ? `View filmography for ${actor.name}` : actor.name}
                 >
                   {/* Portrait Avatar */}
                   <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-neutral-800 border-2 border-neutral-700/80 group-hover:border-netflix transition-all duration-200 shadow-md relative">
@@ -207,10 +212,14 @@ export const CastRail: React.FC<CastRailProps> = ({ cast = [], crew = [] }) => {
               onScroll={updateCrewScroll}
               className="flex items-start gap-4 overflow-x-auto pb-3 pt-1 scroll-smooth scrollbar-thin scrollbar-thumb-neutral-700 scrollbar-track-transparent select-none"
             >
-              {crew.map((member) => (
+              {crew.map((member, idx) => (
                 <div
-                  key={`${member.id}-${member.job}`}
-                  className="flex-shrink-0 w-24 sm:w-28 flex flex-col items-center text-center group"
+                  key={`${member.id}-${member.job}-${idx}`}
+                  onClick={() => onSelectPerson?.(member.id, member.name)}
+                  className={`flex-shrink-0 w-24 sm:w-28 flex flex-col items-center text-center group ${
+                    onSelectPerson ? 'cursor-pointer' : ''
+                  }`}
+                  title={onSelectPerson ? `View filmography for ${member.name}` : member.name}
                 >
                   {/* Portrait Avatar */}
                   <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-neutral-800 border-2 border-neutral-700/80 group-hover:border-netflix transition-all duration-200 shadow-md relative">

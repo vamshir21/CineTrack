@@ -238,6 +238,78 @@ export interface UpcomingMovie {
   providers?: WatchProvider[] | WatchProvidersGroup;
 }
 
+export interface MultiSourceRatings {
+  tmdb_id: number;
+  imdb_id?: string;
+  tmdb_rating?: number;
+  imdb_rating?: number;
+  imdb_votes?: string;
+  rt_critic?: number;
+  rt_audience?: number;
+  metascore?: number;
+}
+
+export interface PersonDetails {
+  id: number;
+  name: string;
+  biography?: string;
+  birthday?: string;
+  deathday?: string;
+  place_of_birth?: string;
+  known_for_department?: string;
+  profile_url?: string;
+}
+
+export interface PersonCredit {
+  id: number;
+  title: string;
+  media_type: 'movie' | 'tv';
+  release_date?: string;
+  vote_average?: number;
+  role?: string;
+  poster_url?: string;
+  backdrop_url?: string;
+  popularity?: number;
+  in_library: boolean;
+  local_item?: Movie | TVSeries;
+  providers?: WatchProvidersGroup | WatchProvider[];
+}
+
+export interface PersonFilmographyResponse {
+  person: PersonDetails;
+  in_library: PersonCredit[];
+  other_works: PersonCredit[];
+  total_credits: number;
+}
+
+export interface VibeDefinition {
+  key: string;
+  name: string;
+  emoji: string;
+  tagline: string;
+  color: string;
+  badge_color: string;
+  count: number;
+  preview_titles: string[];
+}
+
+export interface VibeItemsResponse {
+  vibe: VibeDefinition;
+  items: (Movie | TVSeries)[];
+  count: number;
+}
+
+export interface VibeSurpriseResponse {
+  item: Movie | TVSeries;
+  vibe: {
+    key: string;
+    name: string;
+    emoji: string;
+    tagline: string;
+    badge_color: string;
+  };
+}
+
 export type MediaItem = Movie | TVSeries;
 
 export function isMovie(item: MediaItem): item is Movie {

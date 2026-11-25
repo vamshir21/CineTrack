@@ -1,12 +1,14 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Plus, Check, ThumbsUp, ChevronDown, Star, X } from 'lucide-react';
+import { Play, Plus, Check, ThumbsUp, ChevronDown, X } from 'lucide-react';
 import { ImageWithFallback } from '../common/ImageWithFallback';
 import { ProgressBar } from './ProgressBar';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { watchlistApi } from '../../api/watchlist';
 import { playbackApi } from '../../api/playback';
 import { settingsApi } from '../../api/settings';
+import { tmdbApi } from '../../api/tmdb';
+import { RatingBadges } from '../common/RatingBadges';
 import type { Movie, TVSeries } from '../../types';
 import { isMovie } from '../../types';
 import { formatYear, formatRuntime } from '../../utils/timeUtils';
@@ -29,6 +31,7 @@ export interface MediaCardProps {
   isContinueWatching?: boolean;
   onRemoveFromContinueWatching?: () => void;
   cardSize?: 'small' | 'medium' | 'large';
+  fluidWidth?: boolean;
 }
 
 export const MediaCard: React.FC<MediaCardProps> = ({
@@ -45,6 +48,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   isContinueWatching = false,
   onRemoveFromContinueWatching,
   cardSize = 'medium',
+  fluidWidth = false,
 }) => {
   const queryClient = useQueryClient();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -76,7 +80,6 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   const movieItem = isCurrentMovie ? (item as Movie) : null;
   const seriesItem = !isCurrentMovie && !isEpisode ? (item as TVSeries) : null;
   const year = formatYear(movieItem?.release_date ?? seriesItem?.first_air_date ?? (item as any).air_date ?? '');
-  const rating = item.vote_average ? item.vote_average.toFixed(1) : null;
   const genres = item.genres?.slice(0, 3).join(' • ');
 
   // Watchlist status
@@ -88,6 +91,14 @@ export const MediaCard: React.FC<MediaCardProps> = ({
     enabled: !isEpisode,
   });
   const inWatchlist = !!watchlistData?.in_watchlist;
+
+  // Rotten Tomatoes & IMDb Ratings when expanded
+  const { data: ratingsData } = useQuery({
+    queryKey: ['ratings', isCurrentMovie ? 'movie' : 'tv', item.tmdb_id],
+    queryFn: () => (item.tmdb_id ? tmdbApi.getRatings(isCurrentMovie ? 'movie' : 'tv', item.tmdb_id) : null),
+    enabled: isExpanded && !!item.tmdb_id,
+    staleTime: 1000 * 60 * 60,
+  });
 
   const toggleWatchlistMutation = useMutation({
     mutationFn: async () => {
@@ -172,9 +183,9 @@ export const MediaCard: React.FC<MediaCardProps> = ({
       ref={cardRef}
       animate={{ x: translateX }}
       transition={{ duration: 0.32, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className={`relative flex-shrink-0 select-none ${isExpanded ? 'z-50' : 'z-10'}`}
+      className={`relative ${fluidWidth ? 'w-full min-w-0' : 'flex-shrink-0'} select-none ${isExpanded ? 'z-50' : 'z-10'}`}
       style={{
-        width: `${baseWidth}px`,
+        width: fluidWidth ? '100%' : `${baseWidth}px`,
         aspectRatio: isPoster ? '2/3' : '16/9',
       }}
       onMouseEnter={handleMouseEnter}
@@ -233,7 +244,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
         )}
 
         {/* Title overlay on the card */}
-        <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none">
+        <div className="card-title-overlay absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none">
           <p className="text-white text-xs font-bold truncate drop-shadow">{displayTitle}</p>
           {displaySubtitle && (
             <p className="text-[10px] text-neutral-300 truncate font-medium">{displaySubtitle}</p>
@@ -353,47 +364,54 @@ export const MediaCard: React.FC<MediaCardProps> = ({
                 </button>
               </div>
 
-              {/* Meta row: Rating, Year, Duration/Seasons */}
-              <div className="flex items-center gap-2 text-xs font-semibold">
-                {rating && (
-                  <span className="flex items-center gap-1 text-green-400 font-bold">
-                    <Star className="w-3 h-3 fill-current" />
-                    {rating}
+              {/* Meta Rows */}
+              <div className="space-y-1.5">
+                {/* Row 1: Year, Duration/Seasons, Quality Specs, Languages */}
+                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                  {year && <span className="text-neutral-300">{year}</span>}
+                  {seriesItem?.number_of_seasons && (
+                    <span className="text-neutral-300">
+                      {seriesItem.number_of_seasons} Season{seriesItem.number_of_seasons > 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {movieItem?.runtime && (
+                    <span className="text-neutral-300">{formatRuntime(movieItem.runtime)}</span>
+                  )}
+                  <span className="text-[10px] font-bold border border-neutral-600 px-1 rounded text-neutral-300">
+                    {extractMediaSpecs((item as any).file_path).resolution.includes('4K') ? '4K' : 'HD'}
                   </span>
-                )}
-                {year && <span className="text-neutral-300">{year}</span>}
-                {seriesItem?.number_of_seasons && (
-                  <span className="text-neutral-300">
-                    {seriesItem.number_of_seasons} Season{seriesItem.number_of_seasons > 1 ? 's' : ''}
-                  </span>
-                )}
-                {movieItem?.runtime && (
-                  <span className="text-neutral-300">{formatRuntime(movieItem.runtime)}</span>
-                )}
-                <span className="text-[10px] font-bold border border-neutral-600 px-1 rounded text-neutral-300">
-                  {extractMediaSpecs((item as any).file_path).resolution.includes('4K') ? '4K' : 'HD'}
-                </span>
-                {extractMediaSpecs((item as any).file_path).hdr && (
-                  <span className="text-[10px] font-bold border border-amber-500/70 px-1 rounded text-amber-300">
-                    HDR
-                  </span>
-                )}
-                {/* Languages */}
-                {item.languages && item.languages.length > 0 && (
-                  <div className="flex items-center gap-1">
-                    {item.languages.map((lang) => {
-                      const style = getLanguageBadgeStyle(lang);
-                      return (
-                        <span
-                          key={lang}
-                          className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${style.bg} ${style.text} ${style.border}`}
-                        >
-                          {lang}
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
+                  {extractMediaSpecs((item as any).file_path).hdr && (
+                    <span className="text-[10px] font-bold border border-amber-500/70 px-1 rounded text-amber-300">
+                      HDR
+                    </span>
+                  )}
+                  {/* Languages */}
+                  {item.languages && item.languages.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      {item.languages.map((lang) => {
+                        const style = getLanguageBadgeStyle(lang);
+                        return (
+                          <span
+                            key={lang}
+                            className={`text-[9px] font-black px-1.5 py-0.5 rounded border ${style.bg} ${style.text} ${style.border}`}
+                          >
+                            {lang}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Row 2: Ratings side by side in the same row */}
+                <div className="flex items-center overflow-x-auto scrollbar-none py-0.5">
+                  <RatingBadges
+                    ratings={ratingsData}
+                    tmdbFallback={item.vote_average}
+                    size="sm"
+                    wrap={false}
+                  />
+                </div>
               </div>
 
               {/* Genres */}

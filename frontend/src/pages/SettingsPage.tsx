@@ -17,7 +17,10 @@ import {
   Wifi,
   Save,
   RotateCcw,
+  Sun,
+  Moon,
 } from 'lucide-react';
+import { applyTheme, getInitialTheme, type ThemeMode } from '../utils/themeUtils';
 
 export const SettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -49,6 +52,7 @@ export const SettingsPage: React.FC = () => {
   const [hoverPreviewEnabled, setHoverPreviewEnabled] = useState('true');
   const [hoverDelayMs, setHoverDelayMs] = useState('500');
   const [cardSize, setCardSize] = useState('medium');
+  const [theme, setTheme] = useState<ThemeMode>(getInitialTheme());
   const [appearanceSaved, setAppearanceSaved] = useState(false);
   const [isSavingAppearance, setIsSavingAppearance] = useState(false);
 
@@ -65,6 +69,11 @@ export const SettingsPage: React.FC = () => {
       if (settings.hover_preview_enabled !== undefined) setHoverPreviewEnabled(settings.hover_preview_enabled);
       if (settings.hover_delay_ms !== undefined) setHoverDelayMs(settings.hover_delay_ms);
       if (settings.card_size !== undefined) setCardSize(settings.card_size);
+      if (settings.theme !== undefined) {
+        const themeVal = settings.theme === 'light' ? 'light' : 'dark';
+        setTheme(themeVal);
+        applyTheme(themeVal);
+      }
 
       if (settings.tmdb_api_key !== undefined) setApiKeyInput(settings.tmdb_api_key);
     }
@@ -84,7 +93,8 @@ export const SettingsPage: React.FC = () => {
     settings &&
     (hoverPreviewEnabled !== (settings.hover_preview_enabled ?? 'true') ||
       hoverDelayMs !== (settings.hover_delay_ms ?? '500') ||
-      cardSize !== (settings.card_size ?? 'medium'));
+      cardSize !== (settings.card_size ?? 'medium') ||
+      theme !== (settings.theme ?? 'dark'));
 
   // Test TMDB connection
   const handleTestConnection = async () => {
@@ -210,7 +220,9 @@ export const SettingsPage: React.FC = () => {
         hover_preview_enabled: hoverPreviewEnabled,
         hover_delay_ms: hoverDelayMs,
         card_size: cardSize,
+        theme: theme,
       });
+      applyTheme(theme);
       queryClient.invalidateQueries({ queryKey: ['settings'] });
       setAppearanceSaved(true);
       setTimeout(() => setAppearanceSaved(false), 4000);
@@ -226,6 +238,9 @@ export const SettingsPage: React.FC = () => {
       setHoverPreviewEnabled(settings.hover_preview_enabled ?? 'true');
       setHoverDelayMs(settings.hover_delay_ms ?? '500');
       setCardSize(settings.card_size ?? 'medium');
+      const resetTheme = (settings.theme === 'light' ? 'light' : 'dark') as ThemeMode;
+      setTheme(resetTheme);
+      applyTheme(resetTheme);
     }
   };
 
@@ -667,6 +682,79 @@ export const SettingsPage: React.FC = () => {
                 <option value="500">500 ms (Netflix Standard)</option>
                 <option value="800">800 ms (Deliberate)</option>
                 <option value="1200">1200 ms (Slow)</option>
+              </select>
+            </div>
+
+            {/* Theme Mode Toggle (Dark vs Light) */}
+            <div className="space-y-1.5 bg-[#222] p-3.5 rounded-lg border border-neutral-800">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                  {theme === 'light' ? (
+                    <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  ) : (
+                    <Moon className="w-3.5 h-3.5 text-blue-400" />
+                  )}
+                  <span>Display Theme Mode</span>
+                </label>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
+                    theme === 'light'
+                      ? 'bg-amber-400/20 text-amber-500 border border-amber-500/40'
+                      : 'bg-purple-900/50 text-purple-300 border border-purple-700/50'
+                  }`}
+                >
+                  {theme === 'light' ? 'LIGHT MODE' : 'DARK MODE'}
+                </span>
+              </div>
+              <p className="text-[11px] text-neutral-400">
+                Choose between cinematic dark or clean high-contrast light mode
+              </p>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTheme('dark');
+                    applyTheme('dark');
+                  }}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded border text-xs font-bold transition-all ${
+                    theme === 'dark'
+                      ? 'bg-netflix text-white border-netflix shadow-md'
+                      : 'bg-[#181818] text-neutral-300 border-neutral-700 hover:bg-[#252525]'
+                  }`}
+                >
+                  <Moon className="w-3.5 h-3.5" />
+                  <span>Dark Mode</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTheme('light');
+                    applyTheme('light');
+                  }}
+                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded border text-xs font-bold transition-all ${
+                    theme === 'light'
+                      ? 'bg-amber-500 text-black border-amber-400 shadow-md'
+                      : 'bg-[#181818] text-neutral-300 border-neutral-700 hover:bg-[#252525]'
+                  }`}
+                >
+                  <Sun className="w-3.5 h-3.5" />
+                  <span>Light Mode</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Card Size Selector */}
+            <div className="space-y-1.5 bg-[#222] p-3.5 rounded-lg border border-neutral-800">
+              <label className="text-xs font-bold text-white">Poster & Thumbnail Size</label>
+              <p className="text-[11px] text-neutral-400">Default scale for cards in media rails</p>
+              <select
+                value={cardSize}
+                onChange={(e) => setCardSize(e.target.value)}
+                className="w-full bg-[#181818] border border-neutral-700 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-netflix mt-1"
+              >
+                <option value="small">Small (Compact rows)</option>
+                <option value="medium">Medium (Standard Netflix ratio)</option>
+                <option value="large">Large (High-impact posters)</option>
               </select>
             </div>
           </div>

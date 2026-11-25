@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Info, ChevronLeft, ChevronRight, Star, Shuffle } from 'lucide-react';
+import { Play, Info, ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { tmdbApi } from '../../api/tmdb';
+import { RatingBadges } from '../common/RatingBadges';
 import type { MediaItem } from '../../types';
 import { isMovie } from '../../types';
 import { ImageWithFallback } from '../common/ImageWithFallback';
@@ -31,6 +34,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const currentItem = items && items.length > 0 ? (items[currentIndex] || items[0]) : null;
   const isCurrentMovie = currentItem ? isMovie(currentItem) : true;
 
+  // Rotten Tomatoes & IMDb Ratings for current hero item
+  const { data: ratingsData } = useQuery({
+    queryKey: ['ratings', isCurrentMovie ? 'movie' : 'tv', currentItem?.tmdb_id],
+    queryFn: () =>
+      currentItem?.tmdb_id
+        ? tmdbApi.getRatings(isCurrentMovie ? 'movie' : 'tv', currentItem.tmdb_id)
+        : null,
+    enabled: !!currentItem?.tmdb_id,
+    staleTime: 1000 * 60 * 60,
+  });
+
   // Slideshow auto-rotation: advances every 8 seconds, paused when hovering over the hero
   useEffect(() => {
     if (items.length <= 1) return;
@@ -60,7 +74,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const seriesItem = !isCurrentMovie ? (currentItem as any) : null;
   const releaseDate = movieItem?.release_date || seriesItem?.first_air_date || '';
   const year = formatYear(releaseDate || '');
-  const rating = currentItem.vote_average ? currentItem.vote_average.toFixed(1) : null;
   const genres = currentItem.genres?.slice(0, 3).join(' • ');
   const backdrop = currentItem.backdrop_path || currentItem.poster_path;
 
@@ -96,7 +109,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     <div
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="relative w-full h-[70vh] min-h-[520px] max-h-[750px] overflow-hidden select-none bg-[#141414]"
+      className="hero-container relative w-full h-[70vh] min-h-[520px] max-h-[750px] overflow-hidden select-none bg-[#141414]"
     >
       {/* Background: High-Resolution Static Backdrop Shot */}
       <div className="absolute inset-0 pointer-events-none">
@@ -138,38 +151,45 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             className="space-y-4"
           >
             {/* Badges / Meta */}
-            <div className="flex items-center gap-3 text-xs md:text-sm font-semibold tracking-wide text-neutral-300">
-              <span className="bg-netflix text-white font-bold px-2 py-0.5 rounded text-xs shadow-md">
-                FEATURED
-              </span>
-              {rating && (
-                <span className="flex items-center gap-1 text-green-400 font-bold">
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  {rating}
+            <div className="space-y-2.5">
+              {/* Row 1: Featured, Year, Seasons, Languages, Genre */}
+              <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm font-semibold tracking-wide text-neutral-300">
+                <span className="bg-netflix text-white font-bold px-2.5 py-0.5 rounded text-xs shadow-md">
+                  FEATURED
                 </span>
-              )}
-              {year && <span>{year}</span>}
-              {seriesItem?.number_of_seasons && (
-                <span>
-                  {seriesItem.number_of_seasons} Season{seriesItem.number_of_seasons > 1 ? 's' : ''}
-                </span>
-              )}
-              {currentItem.languages && currentItem.languages.length > 0 && (
-                <div className="flex items-center gap-1.5">
-                  {currentItem.languages.map((lang) => {
-                    const style = getLanguageBadgeStyle(lang);
-                    return (
-                      <span
-                        key={lang}
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded border ${style.bg} ${style.text} ${style.border}`}
-                      >
-                        {lang}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-              {genres && <span className="text-neutral-400 hidden sm:inline">{genres}</span>}
+                {year && <span>{year}</span>}
+                {seriesItem?.number_of_seasons && (
+                  <span>
+                    {seriesItem.number_of_seasons} Season{seriesItem.number_of_seasons > 1 ? 's' : ''}
+                  </span>
+                )}
+                {currentItem.languages && currentItem.languages.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    {currentItem.languages.map((lang) => {
+                      const style = getLanguageBadgeStyle(lang);
+                      return (
+                        <span
+                          key={lang}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded border ${style.bg} ${style.text} ${style.border}`}
+                        >
+                          {lang}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+                {genres && <span className="text-neutral-400 hidden sm:inline">{genres}</span>}
+              </div>
+
+              {/* Row 2: Ratings side by side in the same row */}
+              <div className="flex items-center overflow-x-auto scrollbar-none py-0.5">
+                <RatingBadges
+                  ratings={ratingsData}
+                  tmdbFallback={currentItem.vote_average}
+                  size="sm"
+                  wrap={false}
+                />
+              </div>
             </div>
 
             {/* Title */}
@@ -190,8 +210,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 onClick={() => onPlay(currentItem)}
                 className="flex items-center gap-2 bg-white text-black font-bold px-6 py-2.5 rounded hover:bg-neutral-200 transition-colors shadow-lg active:scale-95"
               >
-                <Play className="w-5 h-5 fill-black" />
-                <span>Play</span>
+                <Play className="w-5 h-5 fill-black text-black" />
+                <span className="text-black">Play</span>
               </button>
               <button
                 onClick={() => onMoreInfo(currentItem)}

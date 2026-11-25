@@ -1,5 +1,17 @@
 import client from './client';
-import type { Movie, TVSeries, HomeData, Episode, LibraryStats, MovieCollection, CollectionDetail } from '../types';
+import type {
+  Movie,
+  TVSeries,
+  HomeData,
+  Episode,
+  LibraryStats,
+  MovieCollection,
+  CollectionDetail,
+  PersonFilmographyResponse,
+  VibeDefinition,
+  VibeItemsResponse,
+  VibeSurpriseResponse,
+} from '../types';
 
 export const libraryApi = {
   getMovies: async (): Promise<Movie[]> => {
@@ -111,6 +123,27 @@ export const libraryApi = {
 
   getCollectionDetail: async (collectionId: number): Promise<CollectionDetail> => {
     const { data } = await client.get(`/api/library/collections/${collectionId}`);
+    return data;
+  },
+
+  getPersonFilmography: async (personId: number): Promise<PersonFilmographyResponse> => {
+    const { data } = await client.get(`/api/library/person/${personId}/filmography`);
+    return data;
+  },
+
+  getVibes: async (): Promise<VibeDefinition[]> => {
+    const { data } = await client.get('/api/library/vibes');
+    return data;
+  },
+
+  getVibeTitles: async (vibeKey: string): Promise<VibeItemsResponse> => {
+    const { data } = await client.get(`/api/library/vibes/${vibeKey}`);
+    return data;
+  },
+
+  getVibeSurprise: async (vibeKey?: string): Promise<VibeSurpriseResponse> => {
+    const params = vibeKey ? { vibe: vibeKey } : {};
+    const { data } = await client.get('/api/library/vibes/surprise', { params });
     return data;
   },
 };

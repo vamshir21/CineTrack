@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Search, Settings, Film, Shuffle, Keyboard } from 'lucide-react';
+import { Search, Settings, Film, Shuffle, Keyboard, Sun, Moon } from 'lucide-react';
+import { applyTheme, getInitialTheme } from '../../utils/themeUtils';
 
 interface NavbarProps {
   onOpenPlaySomething?: () => void;
@@ -11,6 +12,7 @@ export function Navbar({ onOpenPlaySomething, onOpenShortcuts }: NavbarProps = {
   const [scrolled, setScrolled] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentTheme, setCurrentTheme] = useState(getInitialTheme());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -18,6 +20,20 @@ export function Navbar({ onOpenPlaySomething, onOpenShortcuts }: NavbarProps = {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      if (e.detail?.theme) setCurrentTheme(e.detail.theme);
+    };
+    window.addEventListener('cinetrack_theme_changed', handler);
+    return () => window.removeEventListener('cinetrack_theme_changed', handler);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = currentTheme === 'light' ? 'dark' : 'light';
+    setCurrentTheme(next);
+    applyTheme(next);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,9 +128,22 @@ export function Navbar({ onOpenPlaySomething, onOpenShortcuts }: NavbarProps = {
           </button>
         )}
 
+        <button
+          onClick={toggleTheme}
+          className="text-neutral-300 hover:text-white transition-colors p-1"
+          title={currentTheme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          aria-label="Toggle theme"
+        >
+          {currentTheme === 'light' ? (
+            <Moon className="w-5 h-5 text-neutral-700 hover:text-black" />
+          ) : (
+            <Sun className="w-5 h-5 text-amber-400 hover:text-amber-300" />
+          )}
+        </button>
+
         <NavLink
           to="/settings"
-          className="text-white hover:text-white/80 transition-colors"
+          className="text-white hover:text-white/80 transition-colors p-1"
           aria-label="Settings"
         >
           <Settings className="w-5 h-5" />

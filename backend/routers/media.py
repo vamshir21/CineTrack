@@ -844,3 +844,90 @@ def get_collection_franchise(collection_id: int, db: Session = Depends(get_db)):
     }
 
 
+@router.get("/person/{person_id}/filmography")
+def get_person_filmography(person_id: int, db: Session = Depends(get_db)):
+    """Return person profile and filmography split into In-Library and Other Works with OTT badges."""
+    person_details = tmdb_service.get_person_details(person_id)
+    if not person_details:
+        raise HTTPException(status_code=404, detail="Person not found")
+
+    credits_data = tmdb_service.get_person_credits(person_id)
+    all_credits = credits_data.get("cast", []) + credits_data.get("crew", [])
+
+    # Deduplicate credits while keeping highest popularity
+    seen_ids = {}
+    for c in all_credits:
+        cid = c["id"]
+        if cid not in seen_ids or c.get("popularity", 0) > seen_ids[cid].get("popularity", 0):
+            seen_ids[cid] = c
+
+    local_movies = db.query(Movie).filter(Movie.tmdb_id.isnot(None)).all()
+    local_series = db.query(TVSeries).filter(TVSeries.tmdb_id.isnot(None)).all()
+    local_movies_by_tmdb = {m.tmdb_id: _movie_out(m, db) for m in local_movies}
+    local_series_by_tmdb = {s.tmdb_id: _series_out(s, db) for s in local_series}
+
+    in_library = []
+    other_works = []
+
+    for c in sorted(seen_ids.values(), key=lambda x: x.get("popularity", 0), reverse=True):
+        cid = c["id"]
+        local_movie = local_movies_by_tmdb.get(cid)
+        local_tv = local_series_by_tmdb.get(cid)
+        local_item = local_movie or local_tv
+
+        if local_item:
+            in_library.append({
+                **c,
+                "in_library": True,
+                "local_item": local_item,
+            })
+        else:
+            other_works.append(c)
+
+    # Attach OTT providers to top 16 other works
+    annotated_other_works = []
+    for c in other_works[:16]:
+        providers = tmdb_service.get_watch_providers(c.get("media_type", "movie"), c["id"])
+        annotated_other_works.append({
+            **c,
+            "in_library": False,
+            "providers": providers,
+        })
+
+    return {
+        "person": person_details,
+        "in_library": in_library,
+        "other_works": annotated_other_works,
+        "total_credits": len(seen_ids),
+    }
+
+
+@router.get("/vibes")
+def get_library_vibes(db: Session = Depends(get_db)):
+    """Return all mood vibes with counts of local matching titles."""
+    from backend.services import vibe_service
+    return vibe_service.get_vibe_summary(db, _movie_out, _series_out)
+
+
+@router.get("/vibes/surprise")
+def get_vibe_surprise(vibe: Optional[str] = None, db: Session = Depends(get_db)):
+    """Return a random surprise movie or series matching the vibe."""
+    from backend.services import vibe_service
+    surprise = vibe_service.get_random_vibe_surprise(db, vibe, _movie_out, _series_out)
+    if not surprise:
+        raise HTTPException(status_code=404, detail="No matching titles found for this vibe")
+    return surprise
+
+
+@router.get("/vibes/{vibe_key}")
+def get_vibe_titles(vibe_key: str, db: Session = Depends(get_db)):
+    """Return all library titles belonging to a specific vibe."""
+    from backend.services import vibe_service
+    data = vibe_service.get_vibe_items(db, vibe_key, _movie_out, _series_out)
+    if not data["vibe"]:
+        raise HTTPException(status_code=404, detail="Vibe not found")
+    return data
+
+
+
+
