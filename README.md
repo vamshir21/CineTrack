@@ -2,14 +2,14 @@
 
   <img src="https://raw.githubusercontent.com/vamshir21/CineTrack/main/frontend/public/favicon.ico" width="84" alt="CineTrack Logo" style="border-radius: 20%;" />
 
-  # CineTrack 2.0
+  # CineTrack 3.0
   ### *The Netflix of Local Media.*
 
   **A production-grade, privacy-first desktop streaming platform that transforms your offline movie and TV collection into an authentic streaming experience.**
 
   <p align="center">
-    <a href="https://github.com/vamshir21/CineTrack/releases/tag/v2.0.0"><img src="https://img.shields.io/badge/Release-v2.0.0-E50914?style=for-the-badge&logo=netflix&logoColor=white" alt="Release"></a>
-    <a href="https://github.com/vamshir21/CineTrack/actions"><img src="https://img.shields.io/badge/Tests-20%2F20%20Passing-brightgreen?style=for-the-badge&logo=githubactions&logoColor=white" alt="Tests"></a>
+    <a href="https://github.com/vamshir21/CineTrack/releases/tag/v3.0.0"><img src="https://img.shields.io/badge/Release-v3.0.0-E50914?style=for-the-badge&logo=netflix&logoColor=white" alt="Release"></a>
+    <a href="https://github.com/vamshir21/CineTrack/actions"><img src="https://img.shields.io/badge/Tests-30%2F30%20Passing-brightgreen?style=for-the-badge&logo=githubactions&logoColor=white" alt="Tests"></a>
     <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React"></a>
     <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"></a>
     <a href="https://www.videolan.org/"><img src="https://img.shields.io/badge/VLC-libVLC%20Engine-FF8800?style=for-the-badge&logo=vlcmediaplayer&logoColor=white" alt="VLC"></a>
@@ -41,7 +41,8 @@ CineTrack is distributed as ready-to-run source archives. Choose your version be
 
 | Version | Engine & Stack | Key Highlights | Direct Download |
 | :--- | :--- | :--- | :---: |
-| 🚀 **CineTrack 2.0** <br>*(Latest)* | React 19 · FastAPI · libVLC | Complete Netflix-style rebuild, Top 10 rail, 4K badges, Play Something, Library Stats, Permanent Deletion controls | [**⬇️ Download v2.0.0 (.zip)**](https://github.com/vamshir21/CineTrack/archive/refs/tags/v2.0.0.zip) |
+| 🌟 **CineTrack 3.0** <br>*(Latest Release)* | React 19 · FastAPI · libVLC | Upcoming Theaters/OTT Hub with Global Stream Finder, Franchise Binge Rails, Cast & Crew Filmography Hub, Mood-Based Vibe Selector & Shuffle, Rotten Tomatoes & IMDb Ratings, Light Mode & Theme Toggle, Perfect Row Layouts | [**⬇️ Download v3.0.0 (.zip)**](https://github.com/vamshir21/CineTrack/archive/refs/tags/v3.0.0.zip) |
+| 🚀 **CineTrack 2.0** <br>*(Previous)* | React 19 · FastAPI · libVLC | Complete Netflix-style rebuild, Top 10 rail, 4K badges, Play Something, Library Stats, Permanent Deletion controls | [**⬇️ Download v2.0.0 (.zip)**](https://github.com/vamshir21/CineTrack/archive/refs/tags/v2.0.0.zip) |
 | 📦 **CineTrack 1.0** <br>*(Classic)* | PySide6 / PyQt Desktop Shell | Original legacy release | [**⬇️ Download v1.0.0 (.zip)**](https://github.com/vamshir21/CineTrack/archive/refs/tags/v1.0.0.zip) |
 
 ---
@@ -82,7 +83,7 @@ CineTrack is distributed as ready-to-run source archives. Choose your version be
 
 ## ⚡ Why CineTrack?
 
-| Capability | **CineTrack 2.0** | **Generic Media Players (VLC / MPV)** | **Heavy Media Servers (Plex / Jellyfin)** |
+| Capability | **CineTrack 3.0** | **Generic Media Players (VLC / MPV)** | **Heavy Media Servers (Plex / Jellyfin)** |
 | :--- | :---: | :---: | :---: |
 | **Streaming Platform UX** | **Netflix-Quality** | Basic File Player | Generic Web UI |
 | **Playback Latency** | **Instant (Zero Transcode)** | Instant | High (Server Transcoding) |
@@ -90,11 +91,22 @@ CineTrack is distributed as ready-to-run source archives. Choose your version be
 | **Native Playback Engine** | **libVLC Hardware Acceleration** | Direct Player | Browser Video / Transcoded HLS |
 | **Automatic Next Episode** | **Yes (10s Countdown Timer)** | Manual / Playlist | Yes |
 | **Disk Storage Management** | **In-App Permanent Deletion** | Manual File Manager | Complex Permissions |
+| **Global OTT & Discovery** | **Integrated (Where to Stream, Vibes, Rotten Tomatoes)** | No | Limited / External Plugins |
+| **Theme Customization** | **Cinematic Dark & Clean Light Modes** | Fixed | Theme Packs |
 | **Resource Usage** | **Ultra-Lightweight** | Lightweight | Heavy Background Daemon |
 
 ---
 
 ## ✨ Core Features
+
+### 🌟 Discovery, Filmography & Multi-Source Ratings (New in v3.0)
+* **Upcoming In-Theaters & OTT Hub:** Full-screen explorer for anticipated theater and digital streaming releases with release countdowns and a universal search bar discovering where any movie streams (Netflix, Amazon Prime Video, Disney+, Apple TV+, etc.), age certificates, and available languages.
+* **Franchise & Movie Saga Rails:** Automatic grouping of cinematic universes (e.g. *The Hunger Games*, *Jailer*, *Star Wars*, *Harry Potter*) in chronological watch order with "X in Library" counters.
+* **Actor & Director Filmography Hub:** In the Cast & Crew rail, clicking any actor or director opens their profile hub with photo, bio, and filmography partitioned into *"In Your Library"* (instant Play) and *"Other Works & Where to Stream"* (with direct OTT streaming badges).
+* **"Surprise Me by Vibe" Mood Selector:** Curated mood rails (*Mind-Benders*, *Adrenaline Rush*, *Late-Night Crime & Thriller*, *High-Octane Action*, *Feel-Good & Popcorn*, *Dystopian Survival*) with real-time library filters and animated slot-machine shuffle modal.
+* **Rotten Tomatoes & IMDb Ratings:** Real-time integration of Rotten Tomatoes Tomatometer (🍅 Critic Score, 🍿 Audience Score) and IMDb ratings displayed side by side across hero banners, hover cards, and modals.
+* **Light Mode & Theme Customization:** Instant 1-click Sun/Moon toggle in the top Navbar and Settings with full high-contrast theme engine and automatic persistent state.
+* **Native Audio Language Badges:** Auto-detected audio language tags (Hindi, English, Telugu, Tamil, Korean, etc.) displayed across all local media cards and hero banners.
 
 ### 🎬 Authentic Streaming Experience
 * **Cinematic Hero Carousel:** High-resolution backdrop rotation, focal positioning, gradient vignettes, and one-click playback.
