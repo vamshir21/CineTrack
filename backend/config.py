@@ -4,12 +4,14 @@ from pathlib import Path
 # App data directory
 APP_DATA_DIR = Path.home() / ".cinetrack"
 ARTWORK_DIR = APP_DATA_DIR / "artwork"
+STREAM_CACHE_DIR = APP_DATA_DIR / "stream_cache"
 DB_PATH = APP_DATA_DIR / "cinetrack.db"
 LOG_PATH = APP_DATA_DIR / "cinetrack.log"
 
 # Create directories on import
 APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
 ARTWORK_DIR.mkdir(parents=True, exist_ok=True)
+STREAM_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 

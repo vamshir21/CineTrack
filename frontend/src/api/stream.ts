@@ -13,17 +13,35 @@ export interface MediaTracks {
 }
 
 export const streamApi = {
-  getMovieStreamUrl: (movieId: number): string => {
-    return `/api/stream/movie/${movieId}`;
+  getMovieStreamUrl: (movieId: number, audioTrack: number = 0): string => {
+    return audioTrack > 0
+      ? `/api/stream/movie/${movieId}?audio=${audioTrack}`
+      : `/api/stream/movie/${movieId}`;
   },
 
-  getEpisodeStreamUrl: (episodeId: number): string => {
-    return `/api/stream/episode/${episodeId}`;
+  getEpisodeStreamUrl: (episodeId: number, audioTrack: number = 0): string => {
+    return audioTrack > 0
+      ? `/api/stream/episode/${episodeId}?audio=${audioTrack}`
+      : `/api/stream/episode/${episodeId}`;
   },
 
   getTracks: async (mediaType: 'movie' | 'episode', mediaId: number): Promise<MediaTracks> => {
     const { data } = await client.get(`/api/stream/tracks/${mediaType}/${mediaId}`);
     return data;
+  },
+
+  prepareAudio: async (
+    mediaType: 'movie' | 'episode',
+    mediaId: number,
+    audioTrack: number
+  ): Promise<void> => {
+    await client.post(`/api/stream/prepare-audio/${mediaType}/${mediaId}`, {
+      audio_track: audioTrack,
+    });
+  },
+
+  getSubtitleUrl: (mediaType: 'movie' | 'episode', mediaId: number, trackId: string): string => {
+    return `/api/stream/subtitles/${mediaType}/${mediaId}?track=${trackId}`;
   },
 
   reportProgress: async (payload: {

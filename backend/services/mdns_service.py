@@ -57,31 +57,36 @@ def start_mdns(port: int = 8088, hostname: str = "cinema.local"):
                 logger.warning("Could not start avahi-publish: %s", e)
                 _avahi_proc = None
 
-        # 2. Register HTTP service and server info via Zeroconf
-        try:
-            from zeroconf import Zeroconf, ServiceInfo
+        # 2. Register HTTP service and server info via Zeroconf in background thread
+        def _register_zc():
+            global _zeroconf, _service_info
+            try:
+                from zeroconf import Zeroconf, ServiceInfo
 
-            server_name = f"{clean_hostname}."
-            desc = {
-                "name": "CineTrack",
-                "version": "4.0",
-                "path": "/",
-            }
+                server_name = f"{clean_hostname}."
+                desc = {
+                    "name": "CineTrack",
+                    "version": "4.0",
+                    "path": "/",
+                }
 
-            _service_info = ServiceInfo(
-                type_="_http._tcp.local.",
-                name=f"CineTrack Media Center._http._tcp.local.",
-                addresses=[socket.inet_aton(ip)],
-                port=port,
-                properties=desc,
-                server=server_name,
-            )
+                _service_info = ServiceInfo(
+                    type_="_http._tcp.local.",
+                    name=f"CineTrack Media Center._http._tcp.local.",
+                    addresses=[socket.inet_aton(ip)],
+                    port=port,
+                    properties=desc,
+                    server=server_name,
+                )
 
-            _zeroconf = Zeroconf()
-            _zeroconf.register_service(_service_info)
-            logger.info("mDNS broadcast active: http://%s:%s (%s)", hostname, port, ip)
-        except Exception as e:
-            logger.warning("Failed to start Zeroconf mDNS broadcast for %s: %s", hostname, e)
+                _zeroconf = Zeroconf()
+                _zeroconf.register_service(_service_info)
+                logger.info("mDNS broadcast active: http://%s:%s (%s)", hostname, port, ip)
+            except Exception as e:
+                logger.warning("Failed to start Zeroconf mDNS broadcast for %s: %s", hostname, e)
+
+        t = threading.Thread(target=_register_zc, daemon=True)
+        t.start()
 
 
 def stop_mdns():
