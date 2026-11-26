@@ -33,6 +33,7 @@ export const BrowserPlayerModal: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const scrubBarRef = useRef<HTMLDivElement>(null);
   const hideControlsTimerRef = useRef<any>(null);
   const progressReportTimerRef = useRef<any>(null);
   const savedTimeRef = useRef<number>(0);
@@ -77,12 +78,14 @@ export const BrowserPlayerModal: React.FC = () => {
   const lastLeftTapTimeRef = useRef<number>(0);
   const lastRightTapTimeRef = useRef<number>(0);
 
-  // Swipe gesture HUD state (volume only; system controls brightness)
+  // Swipe gesture HUD state (volume only)
   const [hudFeedback, setHudFeedback] = useState<{ type: 'volume'; value: number } | null>(null);
   const touchStartRef = useRef<{ x: number; y: number; val: number; isSwipe: boolean } | null>(null);
 
-  // Scrub bar hover tooltip
-  const [hoverPosition, setHoverPosition] = useState<{ x: number; time: number } | null>(null);
+  // Scrub bar hover & drag state (with Netflix-style preview box)
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubPosition, setScrubPosition] = useState<{ x: number; percent: number; time: number } | null>(null);
+  const [hoverPosition, setHoverPosition] = useState<{ x: number; percent: number; time: number } | null>(null);
 
   // Next episode tracking
   const [nextEpisode, setNextEpisode] = useState<Episode | null>(null);
@@ -127,7 +130,7 @@ export const BrowserPlayerModal: React.FC = () => {
       .catch(() => {});
   }, [isOpen, activeMedia?.id, activeMedia?.mediaType]);
 
-  // Apply subtitle selection to textTracks whenever subtitle selection or metadata changes
+  // Apply subtitle selection to textTracks whenever subtitle selection changes
   const applySubtitleTrack = useCallback((trackId: string) => {
     if (!videoRef.current || !videoRef.current.textTracks) return;
     const tracks = videoRef.current.textTracks;
@@ -247,7 +250,7 @@ export const BrowserPlayerModal: React.FC = () => {
 
   // Auto-hide controls
   const resetControlsTimeout = useCallback(() => {
-    if (isLocked || isAudioSubtitlesOpen) return;
+    if (isLocked || isAudioSubtitlesOpen || isScrubbing) return;
     setControlsVisible(true);
     if (hideControlsTimerRef.current) {
       clearTimeout(hideControlsTimerRef.current);
@@ -257,7 +260,7 @@ export const BrowserPlayerModal: React.FC = () => {
         setControlsVisible(false);
       }, 4000);
     }
-  }, [isPlaying, isLocked, isAudioSubtitlesOpen]);
+  }, [isPlaying, isLocked, isAudioSubtitlesOpen, isScrubbing]);
 
   useEffect(() => {
     resetControlsTimeout();
@@ -407,7 +410,6 @@ export const BrowserPlayerModal: React.FC = () => {
     if (isLocked || e.touches.length !== 1) return;
     const touch = e.touches[0];
     const width = window.innerWidth;
-    // Only track vertical swipe on right 30% for volume
     if (touch.clientX > width * 0.7) {
       touchStartRef.current = {
         x: touch.clientX,
@@ -593,7 +595,7 @@ export const BrowserPlayerModal: React.FC = () => {
   };
 
   const handleTimeUpdate = () => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || isScrubbing) return;
     const cur = videoRef.current.currentTime;
     setCurrentTime(cur);
 
@@ -643,14 +645,75 @@ export const BrowserPlayerModal: React.FC = () => {
     showToast(`Speed: ${nextSpeed}x`);
   };
 
-  // Scrub bar seek handler (touch and click)
-  const handleScrubSeek = (clientX: number, target: HTMLElement) => {
-    if (!videoRef.current || duration <= 0) return;
-    const rect = target.getBoundingClientRect();
-    const clickX = Math.max(0, Math.min(rect.width, clientX - rect.left));
-    const newPos = (clickX / rect.width) * duration;
-    videoRef.current.currentTime = newPos;
-    setCurrentTime(newPos);
+  // ── SCRUB BAR INTERACTION (Smooth Click & Drag + Netflix Preview Box) ────
+  const calcScrubPosition = useCallback(
+    (clientX: number): { x: number; percent: number; time: number } | null => {
+      if (!scrubBarRef.current || duration <= 0) return null;
+      const rect = scrubBarRef.current.getBoundingClientRect();
+      const clampedX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+      const percent = (clampedX / rect.width) * 100;
+      const time = (clampedX / rect.width) * duration;
+      return { x: clampedX, percent, time };
+    },
+    [duration]
+  );
+
+  // Mouse drag listeners on window for continuous drag
+  useEffect(() => {
+    if (!isScrubbing) return;
+
+    const onGlobalMouseMove = (e: MouseEvent) => {
+      const pos = calcScrubPosition(e.clientX);
+      if (pos) {
+        setScrubPosition(pos);
+      }
+    };
+
+    const onGlobalMouseUp = (e: MouseEvent) => {
+      const pos = calcScrubPosition(e.clientX);
+      if (pos && videoRef.current) {
+        videoRef.current.currentTime = pos.time;
+        setCurrentTime(pos.time);
+      }
+      setIsScrubbing(false);
+      setScrubPosition(null);
+    };
+
+    window.addEventListener('mousemove', onGlobalMouseMove);
+    window.addEventListener('mouseup', onGlobalMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onGlobalMouseMove);
+      window.removeEventListener('mouseup', onGlobalMouseUp);
+    };
+  }, [isScrubbing, calcScrubPosition]);
+
+  // Touch handlers for mobile scrub dragging
+  const handleTouchStartScrub = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    if (e.touches.length === 0) return;
+    const pos = calcScrubPosition(e.touches[0].clientX);
+    if (!pos) return;
+    setIsScrubbing(true);
+    setScrubPosition(pos);
+  };
+
+  const handleTouchMoveScrub = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    if (e.touches.length === 0) return;
+    const pos = calcScrubPosition(e.touches[0].clientX);
+    if (pos) {
+      setScrubPosition(pos);
+    }
+  };
+
+  const handleTouchEndScrub = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    if (scrubPosition && videoRef.current) {
+      videoRef.current.currentTime = scrubPosition.time;
+      setCurrentTime(scrubPosition.time);
+    }
+    setIsScrubbing(false);
+    setScrubPosition(null);
   };
 
   if (!isOpen || !activeMedia) return null;
@@ -658,6 +721,17 @@ export const BrowserPlayerModal: React.FC = () => {
   const currentStreamUrl = streamUrlOverride || activeMedia.streamUrl;
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
   const bufferedPercent = duration > 0 ? (bufferedEnd / duration) * 100 : 0;
+
+  // Active scrubbing preview
+  const activePreview = scrubPosition || hoverPosition;
+  const displayedPercent = isScrubbing && scrubPosition ? scrubPosition.percent : progressPercent;
+  const displayedTime = isScrubbing && scrubPosition ? scrubPosition.time : currentTime;
+
+  // Clamped preview box coordinates to prevent overflow off screen
+  const scrubBarWidth = scrubBarRef.current?.getBoundingClientRect().width || 600;
+  const clampedPreviewX = activePreview
+    ? Math.max(75, Math.min(scrubBarWidth - 75, activePreview.x))
+    : 0;
 
   const objectFitClass =
     aspectRatioMode === 'cover'
@@ -752,22 +826,24 @@ export const BrowserPlayerModal: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Center Big Play / Pause Animated Indicator on tap */}
+      {/* Center Big Play / Pause Animated Ripple Indicator on tap */}
       <AnimatePresence>
         {centerIconState && (
-          <motion.div
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1.1, opacity: 1 }}
-            exit={{ scale: 1.3, opacity: 0 }}
-            transition={{ duration: 0.35 }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 p-5 sm:p-6 rounded-full bg-black/80 border border-white/20 text-white shadow-2xl pointer-events-none"
-          >
-            {centerIconState === 'play' ? (
-              <Play className="w-12 h-12 sm:w-14 sm:h-14 fill-white translate-x-0.5" />
-            ) : (
-              <Pause className="w-12 h-12 sm:w-14 sm:h-14 fill-white" />
-            )}
-          </motion.div>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40">
+            <motion.div
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1.1, opacity: 1 }}
+              exit={{ scale: 1.3, opacity: 0 }}
+              transition={{ duration: 0.35 }}
+              className="p-5 sm:p-6 rounded-full bg-black/80 border border-white/20 text-white shadow-2xl pointer-events-none"
+            >
+              {centerIconState === 'play' ? (
+                <Play className="w-12 h-12 sm:w-14 sm:h-14 fill-white translate-x-0.5" />
+              ) : (
+                <Pause className="w-12 h-12 sm:w-14 sm:h-14 fill-white" />
+              )}
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
@@ -800,23 +876,25 @@ export const BrowserPlayerModal: React.FC = () => {
       {/* Swipe HUD Feedback (Volume only) */}
       <AnimatePresence>
         {hudFeedback && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.85 }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 bg-black/85 border border-white/20 rounded-2xl px-6 py-4 flex flex-col items-center gap-2 pointer-events-none shadow-2xl backdrop-blur-md"
-          >
-            <Volume2 className="w-8 h-8 text-white" />
-            <div className="w-32 h-2 bg-neutral-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-red-600 rounded-full transition-all"
-                style={{ width: `${hudFeedback.value}%` }}
-              />
-            </div>
-            <span className="text-xs font-bold text-neutral-200 uppercase tracking-wider">
-              Volume: {hudFeedback.value}%
-            </span>
-          </motion.div>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              className="bg-black/85 border border-white/20 rounded-2xl px-6 py-4 flex flex-col items-center gap-2 pointer-events-none shadow-2xl backdrop-blur-md"
+            >
+              <Volume2 className="w-8 h-8 text-white" />
+              <div className="w-32 h-2 bg-neutral-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-red-600 rounded-full transition-all"
+                  style={{ width: `${hudFeedback.value}%` }}
+                />
+              </div>
+              <span className="text-xs font-bold text-neutral-200 uppercase tracking-wider">
+                Volume: {hudFeedback.value}%
+              </span>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
@@ -925,59 +1003,61 @@ export const BrowserPlayerModal: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* ── CENTER BIG TOUCH CONTROLS (Mobile & Tablet Friendly) ────────────── */}
+      {/* ── DEAD-CENTER CONTROLS (Mathematically Centered via Flexbox) ──────── */}
       <AnimatePresence>
         {controlsVisible && !isLocked && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.2 }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 flex items-center gap-6 sm:gap-10 pointer-events-auto"
-          >
-            {/* -10s circular button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSeekDelta(-10);
-              }}
-              className="p-3 sm:p-4 rounded-full bg-black/65 hover:bg-neutral-800 text-white border border-white/20 active:scale-90 transition-all flex flex-col items-center justify-center shadow-xl"
-              title="Rewind 10 seconds"
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              transition={{ duration: 0.15 }}
+              className="flex items-center gap-6 sm:gap-10 pointer-events-auto"
             >
-              <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" />
-              <span className="text-[9px] font-black tracking-tighter mt-0.5">10</span>
-            </button>
+              {/* -10s circular button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSeekDelta(-10);
+                }}
+                className="p-3.5 sm:p-4 rounded-full bg-black/75 hover:bg-neutral-800 text-white border border-white/20 active:scale-90 transition-all flex flex-col items-center justify-center shadow-2xl backdrop-blur-sm"
+                title="Rewind 10 seconds"
+              >
+                <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" />
+                <span className="text-[9px] font-black tracking-tighter mt-0.5">10</span>
+              </button>
 
-            {/* Big center Play/Pause button */}
-            <button
-              onClick={togglePlay}
-              className="p-4 sm:p-6 rounded-full bg-netflix/95 hover:bg-netflix text-white shadow-2xl active:scale-95 transition-all flex items-center justify-center border border-white/20"
-              title={isPlaying ? 'Pause' : 'Play'}
-            >
-              {isPlaying ? (
-                <Pause className="w-8 h-8 sm:w-11 sm:h-11 fill-white" />
-              ) : (
-                <Play className="w-8 h-8 sm:w-11 sm:h-11 fill-white translate-x-0.5" />
-              )}
-            </button>
+              {/* Big center Play/Pause button */}
+              <button
+                onClick={togglePlay}
+                className="p-5 sm:p-7 rounded-full bg-netflix/95 hover:bg-netflix text-white shadow-2xl active:scale-95 transition-all flex items-center justify-center border border-white/20"
+                title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
+              >
+                {isPlaying ? (
+                  <Pause className="w-8 h-8 sm:w-11 sm:h-11 fill-white" />
+                ) : (
+                  <Play className="w-8 h-8 sm:w-11 sm:h-11 fill-white translate-x-0.5" />
+                )}
+              </button>
 
-            {/* +10s circular button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSeekDelta(10);
-              }}
-              className="p-3 sm:p-4 rounded-full bg-black/65 hover:bg-neutral-800 text-white border border-white/20 active:scale-90 transition-all flex flex-col items-center justify-center shadow-xl"
-              title="Forward 10 seconds"
-            >
-              <RotateCw className="w-6 h-6 sm:w-7 sm:h-7" />
-              <span className="text-[9px] font-black tracking-tighter mt-0.5">10</span>
-            </button>
-          </motion.div>
+              {/* +10s circular button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSeekDelta(10);
+                }}
+                className="p-3.5 sm:p-4 rounded-full bg-black/75 hover:bg-neutral-800 text-white border border-white/20 active:scale-90 transition-all flex flex-col items-center justify-center shadow-2xl backdrop-blur-sm"
+                title="Forward 10 seconds"
+              >
+                <RotateCw className="w-6 h-6 sm:w-7 sm:h-7" />
+                <span className="text-[9px] font-black tracking-tighter mt-0.5">10</span>
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
-      {/* ── RESPONSIVE AUDIO & SUBTITLES MODAL (Phone & Tablet Optimized) ───── */}
+      {/* ── RESPONSIVE AUDIO & SUBTITLES MODAL ─────────────────────────────── */}
       <AnimatePresence>
         {isAudioSubtitlesOpen && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md pointer-events-auto">
@@ -1024,7 +1104,7 @@ export const BrowserPlayerModal: React.FC = () => {
                 </button>
               </div>
 
-              {/* Responsive Layout: 2 Columns on Tablet/Desktop, Tabbed on Mobile */}
+              {/* Content Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 sm:divide-x sm:divide-neutral-800 overflow-y-auto flex-1 pr-1">
                 {/* Audio Column */}
                 <div className={`space-y-2 ${activeModalTab !== 'audio' ? 'hidden sm:block' : ''}`}>
@@ -1104,7 +1184,7 @@ export const BrowserPlayerModal: React.FC = () => {
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
-            className="absolute bottom-20 right-3 sm:right-6 z-40 bg-neutral-900/95 border border-neutral-700/80 rounded-xl p-4 shadow-2xl backdrop-blur-md max-w-sm w-full text-white pointer-events-auto"
+            className="absolute bottom-24 right-3 sm:right-6 z-40 bg-neutral-900/95 border border-neutral-700/80 rounded-xl p-4 shadow-2xl backdrop-blur-md max-w-sm w-full text-white pointer-events-auto"
           >
             <div className="text-[10px] font-bold uppercase tracking-wider text-red-500 mb-1">
               Up Next in {countdown}s
@@ -1140,7 +1220,7 @@ export const BrowserPlayerModal: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* ── BOTTOM CONTROLS BAR (Phone & Tablet Optimized) ────────────────── */}
+      {/* ── BOTTOM CONTROLS BAR (Full Width Netflix Draggable Scrub Bar) ───── */}
       <AnimatePresence>
         {controlsVisible && !isLocked && (
           <motion.div
@@ -1148,80 +1228,132 @@ export const BrowserPlayerModal: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 md:p-6 bg-gradient-to-t from-black/95 via-black/60 to-transparent flex flex-col gap-1.5 sm:gap-2.5 z-30 pointer-events-auto"
+            className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 md:p-6 bg-gradient-to-t from-black/95 via-black/60 to-transparent flex flex-col gap-2 z-30 pointer-events-auto"
           >
-            {/* Touch-Friendly Scrub Bar */}
+            {/* FULL-WIDTH DRAGGABLE SCRUB BAR WITH NETFLIX PREVIEW BOX */}
             <div
-              className="relative w-full h-7 flex items-center cursor-pointer group"
+              ref={scrubBarRef}
+              className="relative w-full h-8 flex items-center cursor-pointer group py-2"
               onMouseMove={(e) => {
-                if (duration <= 0) return;
-                const rect = e.currentTarget.getBoundingClientRect();
-                const hoverX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-                const targetTime = (hoverX / rect.width) * duration;
-                setHoverPosition({ x: hoverX, time: targetTime });
-              }}
-              onMouseLeave={() => setHoverPosition(null)}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleScrubSeek(e.clientX, e.currentTarget);
-              }}
-              onTouchStart={(e) => {
-                e.stopPropagation();
-                if (e.touches.length > 0) {
-                  handleScrubSeek(e.touches[0].clientX, e.currentTarget);
+                if (!isScrubbing) {
+                  const pos = calcScrubPosition(e.clientX);
+                  setHoverPosition(pos);
                 }
               }}
-              onTouchMove={(e) => {
+              onMouseLeave={() => {
+                if (!isScrubbing) setHoverPosition(null);
+              }}
+              onMouseDown={(e) => {
                 e.stopPropagation();
-                if (e.touches.length > 0) {
-                  handleScrubSeek(e.touches[0].clientX, e.currentTarget);
+                e.preventDefault();
+                const pos = calcScrubPosition(e.clientX);
+                if (pos) {
+                  setIsScrubbing(true);
+                  setScrubPosition(pos);
                 }
               }}
+              onTouchStart={handleTouchStartScrub}
+              onTouchMove={handleTouchMoveScrub}
+              onTouchEnd={handleTouchEndScrub}
             >
-              {/* Floating Hover Timestamp Tooltip */}
-              {hoverPosition && (
+              {/* NETFLIX-STYLE FLOATING PREVIEW BOX */}
+              {activePreview && (
                 <div
-                  className="absolute -top-7 -translate-x-1/2 px-2 py-0.5 rounded bg-black/90 border border-neutral-700 text-[10px] font-bold text-white shadow pointer-events-none"
-                  style={{ left: `${hoverPosition.x}px` }}
+                  className="absolute bottom-8 pointer-events-none z-50 flex flex-col items-center transition-all duration-75"
+                  style={{
+                    left: `${clampedPreviewX}px`,
+                    transform: 'translateX(-50%)',
+                  }}
                 >
-                  {formatTime(hoverPosition.time)}
+                  <div className="w-32 sm:w-40 bg-neutral-900 border border-neutral-700 rounded-xl overflow-hidden shadow-2xl flex flex-col items-center">
+                    {/* Backdrop Thumbnail if available */}
+                    {activeMedia.backdropUrl ? (
+                      <div className="w-full h-18 sm:h-22 bg-neutral-950 relative overflow-hidden">
+                        <img
+                          src={activeMedia.backdropUrl}
+                          alt="preview"
+                          className="w-full h-full object-cover opacity-90"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                      </div>
+                    ) : null}
+                    <div className="w-full py-1.5 px-2 bg-black/95 text-center">
+                      <span className="font-mono text-xs sm:text-sm font-black text-white tracking-wider">
+                        {formatTime(activePreview.time)}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Downward triangle caret pointing to scrub line */}
+                  <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black -mt-0.5" />
                 </div>
               )}
 
-              {/* Background track */}
-              <div className="absolute inset-x-0 h-1.5 sm:h-2 my-auto bg-neutral-700/80 rounded-full group-hover:h-2.5 transition-all">
-                {/* Buffered track */}
+              {/* Background Track */}
+              <div className="absolute inset-x-0 h-1.5 group-hover:h-2.5 transition-all bg-neutral-700/80 rounded-full overflow-hidden">
+                {/* Buffered Track */}
                 <div
                   className="h-full bg-neutral-500/60 rounded-full"
                   style={{ width: `${bufferedPercent}%` }}
                 />
               </div>
 
-              {/* Played track */}
+              {/* Played Red Track */}
               <div
-                className="absolute left-0 h-1.5 sm:h-2 my-auto bg-red-600 rounded-full group-hover:h-2.5 transition-all"
-                style={{ width: `${progressPercent}%` }}
+                className="absolute left-0 h-1.5 group-hover:h-2.5 transition-all bg-red-600 rounded-full"
+                style={{ width: `${displayedPercent}%` }}
               />
 
-              {/* Scrubber thumb (always visible on mobile touch, scales on desktop hover) */}
+              {/* Scrubber Thumb */}
               <div
-                className="absolute w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-red-600 shadow-md border-2 border-white transition-transform -translate-x-1/2 pointer-events-none scale-100 sm:scale-0 sm:group-hover:scale-100"
-                style={{ left: `${progressPercent}%` }}
+                className={`absolute w-4 h-4 rounded-full bg-red-600 shadow-xl border-2 border-white -translate-x-1/2 pointer-events-none transition-transform ${
+                  isScrubbing
+                    ? 'scale-125'
+                    : 'scale-100 sm:scale-0 sm:group-hover:scale-100'
+                }`}
+                style={{ left: `${displayedPercent}%` }}
               />
             </div>
 
-            {/* Controls Row */}
-            <div className="flex items-center justify-between text-white">
-              {/* Left Side: Playback Time */}
-              <div className="flex items-center gap-2 sm:gap-4">
-                <div className="text-xs sm:text-sm font-medium text-neutral-300 select-none">
-                  <span className="font-mono">{formatTime(currentTime)}</span>
-                  <span className="text-neutral-500 mx-1">/</span>
-                  <span className="font-mono">{formatTime(duration)}</span>
-                </div>
+            {/* CONTROLS ROW */}
+            <div className="flex items-center justify-between text-white pt-0.5">
+              {/* Left Controls: Play/Pause, Rewind, Forward, Volume, Time */}
+              <div className="flex items-center gap-1.5 sm:gap-3">
+                <button
+                  onClick={togglePlay}
+                  className="p-1.5 sm:p-2 hover:bg-neutral-800 rounded-full text-white transition-all transform active:scale-95"
+                  title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
+                >
+                  {isPlaying ? (
+                    <Pause className="w-5 h-5 sm:w-6 sm:h-6 fill-white" />
+                  ) : (
+                    <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-white" />
+                  )}
+                </button>
 
-                {/* Desktop Volume Slider */}
-                <div className="hidden md:flex items-center gap-2 group/volume ml-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSeekDelta(-10);
+                  }}
+                  className="p-1.5 sm:p-2 hover:bg-neutral-800 rounded-full text-neutral-300 hover:text-white transition-colors"
+                  title="Rewind 10s (Left Arrow)"
+                >
+                  <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSeekDelta(10);
+                  }}
+                  className="p-1.5 sm:p-2 hover:bg-neutral-800 rounded-full text-neutral-300 hover:text-white transition-colors"
+                  title="Forward 10s (Right Arrow)"
+                >
+                  <RotateCw className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+
+                {/* Volume Slider (Desktop) */}
+                <div className="hidden md:flex items-center gap-2 group/volume ml-1">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1231,14 +1363,14 @@ export const BrowserPlayerModal: React.FC = () => {
                       }
                     }}
                     className="p-1.5 hover:bg-neutral-800 rounded-full text-neutral-300 hover:text-white transition-colors"
-                    title="Mute / Unmute"
+                    title="Mute / Unmute (M)"
                   >
                     {isMuted || volume === 0 ? (
-                      <VolumeX className="w-4 h-4" />
+                      <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" />
                     ) : volume < 0.5 ? (
-                      <Volume1 className="w-4 h-4" />
+                      <Volume1 className="w-4 h-4 sm:w-5 sm:h-5" />
                     ) : (
-                      <Volume2 className="w-4 h-4" />
+                      <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
                     )}
                   </button>
                   <input
@@ -1257,13 +1389,32 @@ export const BrowserPlayerModal: React.FC = () => {
                         setIsMuted(false);
                       }
                     }}
-                    className="w-16 accent-red-600 h-1 bg-neutral-600 rounded-lg cursor-pointer"
+                    className="w-16 sm:w-20 accent-red-600 h-1 bg-neutral-600 rounded-lg cursor-pointer"
                   />
+                </div>
+
+                {/* Time Display */}
+                <div className="text-xs sm:text-sm font-medium text-neutral-300 select-none ml-1 sm:ml-2">
+                  <span className="font-mono">{formatTime(displayedTime)}</span>
+                  <span className="text-neutral-500 mx-1">/</span>
+                  <span className="font-mono">{formatTime(duration)}</span>
                 </div>
               </div>
 
-              {/* Right Side: Aspect Ratio, Speed, PiP, Fullscreen */}
-              <div className="flex items-center gap-1.5 sm:gap-3">
+              {/* Right Controls: Audio/Subtitles, Aspect, Speed, PiP, Fullscreen */}
+              <div className="flex items-center gap-1.5 sm:gap-2.5">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsAudioSubtitlesOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-lg bg-neutral-800/80 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors"
+                  title="Audio & Subtitles (S)"
+                >
+                  <MessageSquare className="w-4 h-4 text-netflix" />
+                  <span className="hidden sm:inline text-xs font-bold">Audio & Subtitles</span>
+                </button>
+
                 <button
                   onClick={cycleAspectRatio}
                   className="p-1.5 sm:px-2.5 sm:py-1 rounded-lg bg-neutral-800/80 hover:bg-neutral-700 text-neutral-300 hover:text-white text-xs font-bold transition flex items-center gap-1"
@@ -1295,7 +1446,7 @@ export const BrowserPlayerModal: React.FC = () => {
                     toggleFullscreen();
                   }}
                   className="p-1.5 sm:p-2 hover:bg-neutral-800 rounded-full text-white transition-all transform active:scale-95"
-                  title="Toggle Fullscreen"
+                  title="Toggle Fullscreen (F)"
                 >
                   {isFullscreen ? (
                     <Minimize className="w-4 h-4 sm:w-5 sm:h-5" />

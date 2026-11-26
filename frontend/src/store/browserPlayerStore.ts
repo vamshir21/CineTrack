@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Movie, Episode, TVSeries } from '../types';
 import { streamApi } from '../api/stream';
+import { getBackdropUrl, getPosterUrl } from '../utils/imageUtils';
 
 export interface ActiveMedia {
   mediaType: 'movie' | 'episode';
@@ -13,6 +14,8 @@ export interface ActiveMedia {
   seriesId?: number;
   seasonNumber?: number;
   episodeNumber?: number;
+  backdropUrl?: string | null;
+  posterUrl?: string | null;
 }
 
 interface BrowserPlayerState {
@@ -39,6 +42,8 @@ export const useBrowserPlayerStore = create<BrowserPlayerState>((set) => ({
         streamUrl: streamApi.getMovieStreamUrl(movie.id),
         startPosition,
         duration: movie.runtime ? movie.runtime * 60 : undefined,
+        backdropUrl: getBackdropUrl(movie.backdrop_path),
+        posterUrl: getPosterUrl(movie.poster_path),
       },
     });
   },
@@ -47,7 +52,7 @@ export const useBrowserPlayerStore = create<BrowserPlayerState>((set) => ({
     const startPosition = episode.progress?.position || 0;
     const seriesTitle = series?.title || '';
     const subtitle = `S${episode.season_number} E${episode.episode_number}${episode.title ? ` • ${episode.title}` : ''}`;
-    
+
     set({
       isOpen: true,
       activeMedia: {
@@ -60,6 +65,8 @@ export const useBrowserPlayerStore = create<BrowserPlayerState>((set) => ({
         seriesId: series?.id || (episode as any).series_id,
         seasonNumber: episode.season_number,
         episodeNumber: episode.episode_number,
+        backdropUrl: getBackdropUrl(episode.still_path || (series as any)?.backdrop_path),
+        posterUrl: getPosterUrl((series as any)?.poster_path),
       },
     });
   },
