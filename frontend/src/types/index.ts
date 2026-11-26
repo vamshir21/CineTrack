@@ -322,6 +322,7 @@ export interface LanInfo {
   lan_ip: string;
   port: number;
   lan_url: string;
+  mdns_url?: string;
   hostname: string;
 }
 

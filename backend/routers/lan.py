@@ -32,11 +32,13 @@ def get_lan_info(request: Request):
     lan_ip = get_local_ip()
     port = request.url.port or 8088
     lan_url = f"http://{lan_ip}:{port}"
+    mdns_url = f"http://cinema.local:{port}"
     hostname = socket.gethostname()
 
     return {
         "lan_ip": lan_ip,
         "port": port,
         "lan_url": lan_url,
+        "mdns_url": mdns_url,
         "hostname": hostname,
     }

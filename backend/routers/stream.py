@@ -122,6 +122,51 @@ def stream_episode(episode_id: int, request: Request, db: Session = Depends(get_
     return get_video_response(ep.file_path, request)
 
 
+@router.get("/tracks/{media_type}/{media_id}")
+def get_media_tracks(media_type: str, media_id: int, db: Session = Depends(get_db)):
+    """Return available audio and subtitle tracks for a media item."""
+    from backend.services.language_service import extract_media_languages
+
+    file_path = None
+    if media_type == "movie":
+        movie = db.query(Movie).filter(Movie.id == media_id).first()
+        if movie:
+            file_path = movie.file_path
+    elif media_type == "episode":
+        ep = db.query(Episode).filter(Episode.id == media_id).first()
+        if ep:
+            file_path = ep.file_path
+
+    detected_langs = extract_media_languages(file_path) if file_path else ["English"]
+
+    audio_tracks = []
+    for idx, lang in enumerate(detected_langs):
+        audio_tracks.append({
+            "id": str(idx),
+            "label": f"{lang} [Original]" if idx == 0 else lang,
+            "language": lang.lower()[:2],
+            "default": idx == 0,
+        })
+
+    subtitle_tracks = [
+        {"id": "off", "label": "Off", "language": "off", "default": True},
+        {"id": "en", "label": "English [CC]", "language": "en", "default": False},
+    ]
+    for lang in detected_langs:
+        if lang != "English":
+            subtitle_tracks.append({
+                "id": lang.lower()[:2],
+                "label": f"{lang}",
+                "language": lang.lower()[:2],
+                "default": False,
+            })
+
+    return {
+        "audio_tracks": audio_tracks,
+        "subtitle_tracks": subtitle_tracks,
+    }
+
+
 class StreamProgressPayload(BaseModel):
     media_type: str  # 'movie' or 'episode'
     media_id: int

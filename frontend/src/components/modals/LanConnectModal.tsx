@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Smartphone, Copy, Check, Tv, Wifi } from 'lucide-react';
+import { X, Smartphone, Copy, Check, Tv, Wifi, Sparkles } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useQuery } from '@tanstack/react-query';
 import { lanApi } from '../../api/lan';
@@ -11,7 +11,8 @@ interface LanConnectModalProps {
 }
 
 export const LanConnectModal: React.FC<LanConnectModalProps> = ({ isOpen, onClose }) => {
-  const [copied, setCopied] = useState(false);
+  const [copiedMdns, setCopiedMdns] = useState(false);
+  const [copiedIp, setCopiedIp] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
 
   const { data: lanInfo, isLoading } = useQuery({
@@ -21,11 +22,15 @@ export const LanConnectModal: React.FC<LanConnectModalProps> = ({ isOpen, onClos
     staleTime: 1000 * 60 * 10,
   });
 
-  const lanUrl = lanInfo?.lan_url || `http://${window.location.hostname}:8088`;
+  const port = lanInfo?.port || 8088;
+  const mdnsUrl = lanInfo?.mdns_url || `http://cinema.local:${port}`;
+  const ipUrl = lanInfo?.lan_url || `http://${window.location.hostname}:${port}`;
 
   useEffect(() => {
-    if (isOpen && lanUrl) {
-      QRCode.toDataURL(lanUrl, {
+    if (isOpen) {
+      // Use mDNS or IP url for QR code
+      const targetUrl = mdnsUrl || ipUrl;
+      QRCode.toDataURL(targetUrl, {
         width: 256,
         margin: 2,
         color: {
@@ -36,14 +41,47 @@ export const LanConnectModal: React.FC<LanConnectModalProps> = ({ isOpen, onClos
         .then((url) => setQrDataUrl(url))
         .catch((err) => console.error('Failed to generate QR code:', err));
     }
-  }, [isOpen, lanUrl]);
+  }, [isOpen, mdnsUrl, ipUrl]);
 
   if (!isOpen) return null;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(lanUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+  const copyToClipboard = async (text: string, type: 'mdns' | 'ip') => {
+    let success = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        success = true;
+      }
+    } catch (e) {}
+
+    // Fallback for non-HTTPS (LAN HTTP)
+    if (!success) {
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '-9999px';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        success = document.execCommand('copy');
+        document.body.removeChild(textArea);
+      } catch (err) {
+        success = false;
+      }
+    }
+
+    if (success) {
+      if (type === 'mdns') {
+        setCopiedMdns(true);
+        setTimeout(() => setCopiedMdns(false), 2500);
+      } else {
+        setCopiedIp(true);
+        setTimeout(() => setCopiedIp(false), 2500);
+      }
+    }
   };
 
   return (
@@ -54,7 +92,7 @@ export const LanConnectModal: React.FC<LanConnectModalProps> = ({ isOpen, onClos
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.2 }}
-          className="relative w-full max-w-lg bg-[#181818] border border-neutral-700/80 rounded-2xl p-6 sm:p-8 shadow-2xl text-white"
+          className="relative w-full max-w-xl bg-[#181818] border border-neutral-700/80 rounded-2xl p-6 sm:p-8 shadow-2xl text-white"
         >
           {/* Close button */}
           <button
@@ -82,7 +120,7 @@ export const LanConnectModal: React.FC<LanConnectModalProps> = ({ isOpen, onClos
             Anyone connected to your home Wi-Fi can stream movies and TV shows directly in their mobile or TV browser with zero lag and instant seeking.
           </p>
 
-          {/* QR Code Card */}
+          {/* QR Code and URLs */}
           <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-xl bg-neutral-900/90 border border-neutral-800 mb-6">
             <div className="p-3 bg-white rounded-xl shadow-lg flex-shrink-0">
               {qrDataUrl ? (
@@ -94,19 +132,57 @@ export const LanConnectModal: React.FC<LanConnectModalProps> = ({ isOpen, onClos
               )}
             </div>
 
-            <div className="space-y-3 text-left flex-1 min-w-0">
+            <div className="space-y-3 text-left flex-1 min-w-0 w-full">
+              {/* Option 1: cinema.local mDNS Address */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-emerald-400" />
+                    Easy Connect (No IP Needed)
+                  </span>
+                  <span className="text-[10px] bg-emerald-950/60 text-emerald-300 border border-emerald-700/60 px-1.5 py-0.2 rounded font-bold">
+                    mDNS
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 bg-black/60 border border-emerald-700/50 px-3 py-2 rounded-lg">
+                  <span className="font-mono text-xs text-emerald-300 font-bold truncate flex-1">
+                    {mdnsUrl}
+                  </span>
+                  <button
+                    onClick={() => copyToClipboard(mdnsUrl, 'mdns')}
+                    className="flex items-center gap-1 text-xs font-bold px-2 py-1 bg-emerald-700/80 hover:bg-emerald-600 text-white rounded transition-colors flex-shrink-0 active:scale-95"
+                    title="Copy mDNS URL"
+                  >
+                    {copiedMdns ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-white" />
+                        <span>Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Option 2: Direct IP fallback */}
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block mb-1">
-                  Connect URL
+                  Direct LAN IP Address
                 </span>
                 <div className="flex items-center gap-2 bg-black/60 border border-neutral-700 px-3 py-2 rounded-lg">
-                  <span className="font-mono text-xs text-emerald-400 truncate flex-1">{lanUrl}</span>
+                  <span className="font-mono text-xs text-neutral-300 truncate flex-1">
+                    {ipUrl}
+                  </span>
                   <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-1 text-xs font-bold px-2 py-1 bg-neutral-800 hover:bg-neutral-700 text-white rounded transition-colors flex-shrink-0"
-                    title="Copy URL"
+                    onClick={() => copyToClipboard(ipUrl, 'ip')}
+                    className="flex items-center gap-1 text-xs font-bold px-2 py-1 bg-neutral-800 hover:bg-neutral-700 text-white rounded transition-colors flex-shrink-0 active:scale-95"
+                    title="Copy IP URL"
                   >
-                    {copied ? (
+                    {copiedIp ? (
                       <>
                         <Check className="w-3.5 h-3.5 text-emerald-400" />
                         <span className="text-emerald-400">Copied</span>
@@ -121,14 +197,14 @@ export const LanConnectModal: React.FC<LanConnectModalProps> = ({ isOpen, onClos
                 </div>
               </div>
 
-              <div className="text-[11px] text-neutral-400 space-y-1">
+              <div className="text-[11px] text-neutral-400 space-y-0.5 pt-1">
                 <p>• <strong>iPhone / Android</strong>: Open Camera & scan QR code</p>
-                <p>• <strong>Smart TV / Laptop</strong>: Type URL in your browser</p>
+                <p>• <strong>Smart TV / Laptop</strong>: Type <strong>cinema.local:8088</strong> in browser</p>
               </div>
             </div>
           </div>
 
-          {/* How it works features */}
+          {/* Features */}
           <div className="grid grid-cols-2 gap-3 text-left mb-6">
             <div className="p-3 rounded-lg bg-neutral-900/50 border border-neutral-800/80">
               <div className="flex items-center gap-2 text-xs font-bold text-white mb-1">
@@ -150,7 +226,7 @@ export const LanConnectModal: React.FC<LanConnectModalProps> = ({ isOpen, onClos
             </div>
           </div>
 
-          {/* Close / Action */}
+          {/* Close */}
           <div className="flex items-center justify-end gap-3">
             <button
               onClick={onClose}

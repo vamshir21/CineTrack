@@ -48,7 +48,14 @@ async def lifespan(app: FastAPI):
         db.close()
 
     logger.info("CineTrack backend started. DB: %s", APP_DATA_DIR / "cinetrack.db")
+
+    # Start mDNS broadcaster for cinema.local
+    from backend.services.mdns_service import start_mdns, stop_mdns
+    start_mdns(port=8088, hostname="cinema.local")
+
     yield
+
+    stop_mdns()
     logger.info("CineTrack backend shutting down.")
 
 
