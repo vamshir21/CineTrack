@@ -199,23 +199,27 @@ class TestDeletionAndStats(unittest.TestCase):
         db.refresh(ep1)
         db.refresh(ep2)
 
-        # Add completed watch history for ep1
-        wh1 = WatchHistory(media_type="episode", media_id=ep1.id, position_seconds=2000, duration_seconds=2000, completed=True)
-        db.add(wh1)
-        db.commit()
+        try:
+            # Add completed watch history for ep1
+            wh1 = WatchHistory(media_type="episode", media_id=ep1.id, position_seconds=2000, duration_seconds=2000, completed=True)
+            db.add(wh1)
+            db.commit()
 
-        # Calling remove on ep2 (up next) or ep1 removes the series entirely
-        res = self.client.delete(f"/api/playback/continue-watching/episode/{ep2.id}")
-        self.assertEqual(res.status_code, 200)
+            # Calling remove on ep2 (up next) or ep1 removes the series entirely
+            res = self.client.delete(f"/api/playback/continue-watching/episode/{ep2.id}")
+            self.assertEqual(res.status_code, 200)
 
-        # Check that watch history for ep1 was deleted
-        remaining = db.query(WatchHistory).filter(WatchHistory.media_type == "episode", WatchHistory.media_id.in_([ep1.id, ep2.id])).count()
-        self.assertEqual(remaining, 0)
-
-        # Clean up
-        db.delete(series)
-        db.commit()
-        db.close()
+            # Check that watch history for ep1 was deleted
+            remaining = db.query(WatchHistory).filter(WatchHistory.media_type == "episode", WatchHistory.media_id.in_([ep1.id, ep2.id])).count()
+            self.assertEqual(remaining, 0)
+        finally:
+            # Clean up
+            db.query(WatchHistory).filter(WatchHistory.media_type == "episode", WatchHistory.media_id.in_([ep1.id, ep2.id])).delete()
+            db.query(Episode).filter(Episode.series_id == series.id).delete()
+            db.query(Season).filter(Season.series_id == series.id).delete()
+            db.delete(series)
+            db.commit()
+            db.close()
 
     def test_more_like_this(self):
         """Test GET /api/library/more-like-this endpoint."""

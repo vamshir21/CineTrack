@@ -249,14 +249,15 @@ class TestPlaybackAndWatchlist(unittest.TestCase):
         self.db.add(m)
         self.db.commit()
 
-        res = client.get("/api/library/random")
-        self.assertEqual(res.status_code, 200)
-        data = res.json()
-        self.assertIn("title", data)
-
-        # Cleanup
-        self.db.delete(m)
-        self.db.commit()
+        try:
+            res = client.get("/api/library/random")
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertIn("title", data)
+        finally:
+            # Cleanup
+            self.db.delete(m)
+            self.db.commit()
 
     def test_playback_toggle_api(self):
         from fastapi.testclient import TestClient
