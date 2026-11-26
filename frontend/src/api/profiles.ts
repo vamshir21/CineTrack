@@ -25,4 +25,13 @@ export const profilesApi = {
   delete: async (profileId: number): Promise<void> => {
     await client.delete(`/api/profiles/${profileId}`);
   },
+
+  verifyAdminPin: async (pin: string): Promise<boolean> => {
+    try {
+      const { data } = await client.post('/api/profiles/verify-pin', { pin });
+      return !!data.valid;
+    } catch {
+      return false;
+    }
+  },
 };

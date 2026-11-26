@@ -9,6 +9,21 @@ from backend.schemas import ProfileCreate, ProfileUpdate, ProfileOut
 
 router = APIRouter(prefix="/api/profiles", tags=["profiles"])
 
+ADMIN_PIN = "2104"
+
+
+@router.post("/verify-pin")
+def verify_admin_pin(body: dict):
+    """Verify 4-digit admin password/PIN."""
+    pin = str(body.get("pin", "")).strip()
+    if pin == ADMIN_PIN:
+        return {"valid": True, "message": "Admin PIN verified"}
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect PIN. Please enter the 4-digit admin code.",
+    )
+
+
 
 def get_current_profile(
     x_profile_id: int | None = Header(None, alias="X-Profile-ID"),
