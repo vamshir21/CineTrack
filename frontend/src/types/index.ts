@@ -310,6 +310,21 @@ export interface VibeSurpriseResponse {
   };
 }
 
+export interface Profile {
+  id: number;
+  name: string;
+  avatar: string;
+  is_admin: boolean;
+  created_at: string;
+}
+
+export interface LanInfo {
+  lan_ip: string;
+  port: number;
+  lan_url: string;
+  hostname: string;
+}
+
 export type MediaItem = Movie | TVSeries;
 
 export function isMovie(item: MediaItem): item is Movie {

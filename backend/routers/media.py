@@ -12,10 +12,12 @@ logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from typing import Optional
+from fastapi import Header
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import Movie, TVSeries, Season, Episode, WatchHistory, Watchlist
+from backend.models import Movie, TVSeries, Season, Episode, WatchHistory, Watchlist, Profile
 from backend.services import tmdb_service
 
 router = APIRouter(prefix="/api/library", tags=["library"])
@@ -26,15 +28,31 @@ class MarkWatchedRequest(BaseModel):
     media_id: int
 
 
+def _resolve_profile_id(x_profile_id: Optional[int], db: Session) -> int:
+    if x_profile_id:
+        return x_profile_id
+    p = db.query(Profile).filter(Profile.is_admin == True).order_by(Profile.id.asc()).first()
+    return p.id if p else 1
+
+
+def _require_admin(x_profile_id: Optional[int], db: Session):
+    """Enforce that only admin can delete movies/shows or modify library."""
+    if x_profile_id:
+        p = db.query(Profile).filter(Profile.id == x_profile_id).first()
+        if p and not p.is_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Admin privileges required to delete titles from the library or disk."
+            )
+
 
 # ── Progress helpers ───────────────────────────────────────────────────────────
 
-def _get_progress(db: Session, media_type: str, media_id: int) -> dict:
-    record = (
-        db.query(WatchHistory)
-        .filter(WatchHistory.media_type == media_type, WatchHistory.media_id == media_id)
-        .first()
-    )
+def _get_progress(db: Session, media_type: str, media_id: int, profile_id: Optional[int] = None) -> dict:
+    q = db.query(WatchHistory).filter(WatchHistory.media_type == media_type, WatchHistory.media_id == media_id)
+    if profile_id:
+        q = q.filter(WatchHistory.profile_id == profile_id)
+    record = q.first()
     if not record:
         return {"position": 0.0, "duration": 0.0, "completed": False, "percentage": 0.0}
     pct = 0.0
@@ -48,20 +66,17 @@ def _get_progress(db: Session, media_type: str, media_id: int) -> dict:
     }
 
 
-def _series_progress(db: Session, series_id: int) -> dict:
+def _series_progress(db: Session, series_id: int, profile_id: Optional[int] = None) -> dict:
     """Aggregate progress for a series: last-watched episode progress."""
-    # Find most recently watched episode in this series
     eps = db.query(Episode).filter(Episode.series_id == series_id).all()
     ep_ids = [e.id for e in eps]
     if not ep_ids:
         return {"position": 0.0, "duration": 0.0, "completed": False, "percentage": 0.0}
 
-    record = (
-        db.query(WatchHistory)
-        .filter(WatchHistory.media_type == "episode", WatchHistory.media_id.in_(ep_ids))
-        .order_by(WatchHistory.watched_at.desc())
-        .first()
-    )
+    q = db.query(WatchHistory).filter(WatchHistory.media_type == "episode", WatchHistory.media_id.in_(ep_ids))
+    if profile_id:
+        q = q.filter(WatchHistory.profile_id == profile_id)
+    record = q.order_by(WatchHistory.watched_at.desc()).first()
     if not record:
         return {"position": 0.0, "duration": 0.0, "completed": False, "percentage": 0.0}
     pct = 0.0
@@ -77,9 +92,9 @@ def _series_progress(db: Session, series_id: int) -> dict:
 
 # ── Serializers ────────────────────────────────────────────────────────────────
 
-def _movie_out(movie: Movie, db: Session) -> dict:
+def _movie_out(movie: Movie, db: Session, profile_id: Optional[int] = None) -> dict:
     from backend.services.language_service import extract_media_languages
-    progress = _get_progress(db, "movie", movie.id)
+    progress = _get_progress(db, "movie", movie.id, profile_id)
     genres = []
     if movie.genres:
         try:
@@ -103,6 +118,7 @@ def _movie_out(movie: Movie, db: Session) -> dict:
         "added_at": movie.added_at.isoformat(),
         "file_size": movie.file_size,
         "progress": progress,
+        "watched": progress["completed"],
         "media_type": "movie",
     }
 
@@ -120,9 +136,9 @@ def _season_out(season: Season) -> dict:
     }
 
 
-def _episode_out(episode: Episode, db: Session) -> dict:
+def _episode_out(episode: Episode, db: Session, profile_id: Optional[int] = None) -> dict:
     from backend.services.language_service import extract_media_languages
-    progress = _get_progress(db, "episode", episode.id)
+    progress = _get_progress(db, "episode", episode.id, profile_id)
     series = db.query(TVSeries).filter(TVSeries.id == episode.series_id).first() if episode.series_id else None
     series_title = series.title if series else ""
     poster_path = series.poster_path if series else None
@@ -147,13 +163,14 @@ def _episode_out(episode: Episode, db: Session) -> dict:
         "languages": languages,
         "added_at": episode.added_at.isoformat() if episode.added_at else "",
         "progress": progress,
+        "watched": progress["completed"],
         "media_type": "episode",
     }
 
 
-def _series_out(series: TVSeries, db: Session, include_seasons: bool = False) -> dict:
+def _series_out(series: TVSeries, db: Session, include_seasons: bool = False, profile_id: Optional[int] = None) -> dict:
     from backend.services.language_service import extract_media_languages
-    progress = _series_progress(db, series.id)
+    progress = _series_progress(db, series.id, profile_id)
     genres = []
     if series.genres:
         try:
@@ -162,6 +179,21 @@ def _series_out(series: TVSeries, db: Session, include_seasons: bool = False) ->
             pass
     first_ep = db.query(Episode).filter(Episode.series_id == series.id).first()
     languages = extract_media_languages(first_ep.file_path if first_ep else None)
+    
+    # Determine if series is completed for this profile
+    eps = db.query(Episode).filter(Episode.series_id == series.id).all()
+    ep_ids = [e.id for e in eps]
+    is_series_watched = False
+    if ep_ids:
+        q = db.query(WatchHistory).filter(
+            WatchHistory.media_type == "episode",
+            WatchHistory.media_id.in_(ep_ids),
+            WatchHistory.completed == True,
+        )
+        if profile_id:
+            q = q.filter(WatchHistory.profile_id == profile_id)
+        is_series_watched = q.count() >= len(ep_ids)
+
     out = {
         "id": series.id,
         "title": series.title,
@@ -177,6 +209,7 @@ def _series_out(series: TVSeries, db: Session, include_seasons: bool = False) ->
         "added_at": series.added_at.isoformat(),
         "folder_key": series.folder_key,
         "progress": progress,
+        "watched": is_series_watched,
         "media_type": "series",
     }
     if include_seasons:
@@ -188,21 +221,36 @@ def _series_out(series: TVSeries, db: Session, include_seasons: bool = False) ->
 # ── Endpoints ──────────────────────────────────────────────────────────────────
 
 @router.get("/movies")
-def list_movies(db: Session = Depends(get_db)):
+def list_movies(
+    x_profile_id: Optional[int] = Header(None, alias="X-Profile-ID"),
+    db: Session = Depends(get_db)
+):
+    profile_id = _resolve_profile_id(x_profile_id, db)
     movies = db.query(Movie).order_by(Movie.added_at.desc()).all()
-    return [_movie_out(m, db) for m in movies]
+    return [_movie_out(m, db, profile_id) for m in movies]
 
 
 @router.get("/movies/{movie_id}")
-def get_movie(movie_id: int, db: Session = Depends(get_db)):
+def get_movie(
+    movie_id: int,
+    x_profile_id: Optional[int] = Header(None, alias="X-Profile-ID"),
+    db: Session = Depends(get_db)
+):
+    profile_id = _resolve_profile_id(x_profile_id, db)
     movie = db.query(Movie).filter(Movie.id == movie_id).first()
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
-    return _movie_out(movie, db)
+    return _movie_out(movie, db, profile_id)
 
 
 @router.delete("/movies/{movie_id}")
-def delete_movie(movie_id: int, delete_file: bool = False, db: Session = Depends(get_db)):
+def delete_movie(
+    movie_id: int,
+    delete_file: bool = False,
+    x_profile_id: Optional[int] = Header(None, alias="X-Profile-ID"),
+    db: Session = Depends(get_db)
+):
+    _require_admin(x_profile_id, db)
     movie = db.query(Movie).filter(Movie.id == movie_id).first()
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
@@ -234,21 +282,36 @@ def delete_movie(movie_id: int, delete_file: bool = False, db: Session = Depends
 
 
 @router.get("/series")
-def list_series(db: Session = Depends(get_db)):
+def list_series(
+    x_profile_id: Optional[int] = Header(None, alias="X-Profile-ID"),
+    db: Session = Depends(get_db)
+):
+    profile_id = _resolve_profile_id(x_profile_id, db)
     series_list = db.query(TVSeries).order_by(TVSeries.added_at.desc()).all()
-    return [_series_out(s, db) for s in series_list]
+    return [_series_out(s, db, False, profile_id) for s in series_list]
 
 
 @router.get("/series/{series_id}")
-def get_series(series_id: int, db: Session = Depends(get_db)):
+def get_series(
+    series_id: int,
+    x_profile_id: Optional[int] = Header(None, alias="X-Profile-ID"),
+    db: Session = Depends(get_db)
+):
+    profile_id = _resolve_profile_id(x_profile_id, db)
     series = db.query(TVSeries).filter(TVSeries.id == series_id).first()
     if not series:
         raise HTTPException(status_code=404, detail="Series not found")
-    return _series_out(series, db, include_seasons=True)
+    return _series_out(series, db, True, profile_id)
 
 
 @router.get("/series/{series_id}/seasons/{season_num}/episodes")
-def list_episodes(series_id: int, season_num: int, db: Session = Depends(get_db)):
+def list_episodes(
+    series_id: int,
+    season_num: int,
+    x_profile_id: Optional[int] = Header(None, alias="X-Profile-ID"),
+    db: Session = Depends(get_db)
+):
+    profile_id = _resolve_profile_id(x_profile_id, db)
     series = db.query(TVSeries).filter(TVSeries.id == series_id).first()
     if not series:
         raise HTTPException(status_code=404, detail="Series not found")
@@ -258,11 +321,17 @@ def list_episodes(series_id: int, season_num: int, db: Session = Depends(get_db)
         .order_by(Episode.episode_number)
         .all()
     )
-    return [_episode_out(e, db) for e in episodes]
+    return [_episode_out(e, db, profile_id) for e in episodes]
 
 
 @router.delete("/series/{series_id}")
-def delete_series(series_id: int, delete_file: bool = False, db: Session = Depends(get_db)):
+def delete_series(
+    series_id: int,
+    delete_file: bool = False,
+    x_profile_id: Optional[int] = Header(None, alias="X-Profile-ID"),
+    db: Session = Depends(get_db)
+):
+    _require_admin(x_profile_id, db)
     series = db.query(TVSeries).filter(TVSeries.id == series_id).first()
     if not series:
         raise HTTPException(status_code=404, detail="Series not found")
@@ -302,7 +371,13 @@ def delete_series(series_id: int, delete_file: bool = False, db: Session = Depen
 
 
 @router.delete("/episodes/{episode_id}")
-def delete_episode(episode_id: int, delete_file: bool = False, db: Session = Depends(get_db)):
+def delete_episode(
+    episode_id: int,
+    delete_file: bool = False,
+    x_profile_id: Optional[int] = Header(None, alias="X-Profile-ID"),
+    db: Session = Depends(get_db)
+):
+    _require_admin(x_profile_id, db)
     episode = db.query(Episode).filter(Episode.id == episode_id).first()
     if not episode:
         raise HTTPException(status_code=404, detail="Episode not found")
@@ -458,19 +533,18 @@ def get_more_like_this(media_type: str, item_id: int, limit: int = 6, db: Sessio
 
 
 
-def _get_continue_watching_items(db: Session, limit: int = 20) -> list:
+def _get_continue_watching_items(db: Session, limit: int = 20, profile_id: Optional[int] = None) -> list:
     """
-    Build Netflix-style Continue Watching list:
+    Build Netflix-style Continue Watching list scoped to active profile:
     - Movies: included if in-progress (> 0s) and not completed.
     - TV Series: if any episode has watch history, shows the currently in-progress episode.
       If the last watched episode was completed, automatically shows the NEXT unwatched episode (at 0s).
       Each TV series appears at most once, sorted by most recently watched.
     """
-    all_history = (
-        db.query(WatchHistory)
-        .order_by(WatchHistory.watched_at.desc())
-        .all()
-    )
+    q = db.query(WatchHistory)
+    if profile_id:
+        q = q.filter(WatchHistory.profile_id == profile_id)
+    all_history = q.order_by(WatchHistory.watched_at.desc()).all()
 
     items = []
     seen_series_ids = set()
@@ -481,7 +555,6 @@ def _get_continue_watching_items(db: Session, limit: int = 20) -> list:
         if rec.media_type == "movie":
             m = db.query(Movie).filter(Movie.id == rec.media_id).first()
             if not m:
-                # Self-healing: check if this ID is an Episode
                 ep = db.query(Episode).filter(Episode.id == rec.media_id).first()
                 if ep:
                     rec.media_type = "episode"
@@ -494,7 +567,7 @@ def _get_continue_watching_items(db: Session, limit: int = 20) -> list:
                 seen_movie_ids.add(m.id)
                 # Only show movie if in-progress and not completed
                 if rec.position_seconds > 0 and not rec.completed:
-                    items.append(_movie_out(m, db))
+                    items.append(_movie_out(m, db, profile_id))
 
         # 2. Episode handling
         if rec.media_type == "episode":
@@ -515,37 +588,34 @@ def _get_continue_watching_items(db: Session, limit: int = 20) -> list:
             )
             series_ep_ids = [e.id for e in series_eps]
 
-            # A. Check if there is an episode currently in-progress for this series
-            in_prog_hist = (
-                db.query(WatchHistory)
-                .filter(
-                    WatchHistory.media_type == "episode",
-                    WatchHistory.media_id.in_(series_ep_ids),
-                    WatchHistory.position_seconds > 0,
-                    WatchHistory.completed == False,
-                )
-                .order_by(WatchHistory.watched_at.desc())
-                .first()
+            # A. Check if there is an episode currently in-progress for this series for this profile
+            in_prog_q = db.query(WatchHistory).filter(
+                WatchHistory.media_type == "episode",
+                WatchHistory.media_id.in_(series_ep_ids),
+                WatchHistory.position_seconds > 0,
+                WatchHistory.completed == False,
             )
+            if profile_id:
+                in_prog_q = in_prog_q.filter(WatchHistory.profile_id == profile_id)
+            in_prog_hist = in_prog_q.order_by(WatchHistory.watched_at.desc()).first()
 
             if in_prog_hist:
                 target_ep = db.query(Episode).filter(Episode.id == in_prog_hist.media_id).first()
                 if target_ep:
-                    items.append(_episode_out(target_ep, db))
+                    items.append(_episode_out(target_ep, db, profile_id))
                     if len(items) >= limit:
                         break
                     continue
 
             # B. Last watched episode was completed: find next episode chronologically
-            last_hist = (
-                db.query(WatchHistory)
-                .filter(
-                    WatchHistory.media_type == "episode",
-                    WatchHistory.media_id.in_(series_ep_ids),
-                )
-                .order_by(WatchHistory.watched_at.desc())
-                .first()
+            last_hist_q = db.query(WatchHistory).filter(
+                WatchHistory.media_type == "episode",
+                WatchHistory.media_id.in_(series_ep_ids),
             )
+            if profile_id:
+                last_hist_q = last_hist_q.filter(WatchHistory.profile_id == profile_id)
+            last_hist = last_hist_q.order_by(WatchHistory.watched_at.desc()).first()
+
             if last_hist:
                 last_ep = db.query(Episode).filter(Episode.id == last_hist.media_id).first()
                 if last_ep:
@@ -560,7 +630,7 @@ def _get_continue_watching_items(db: Session, limit: int = 20) -> list:
                         .first()
                     )
                     if next_ep:
-                        ep_out = _episode_out(next_ep, db)
+                        ep_out = _episode_out(next_ep, db, profile_id)
                         ep_out["is_up_next"] = True
                         items.append(ep_out)
                         if len(items) >= limit:
@@ -574,71 +644,93 @@ def _get_continue_watching_items(db: Session, limit: int = 20) -> list:
 
 
 @router.get("/continue-watching")
-def continue_watching(db: Session = Depends(get_db)):
-    return _get_continue_watching_items(db, limit=20)
+def continue_watching(
+    x_profile_id: Optional[int] = Header(None, alias="X-Profile-ID"),
+    db: Session = Depends(get_db)
+):
+    profile_id = _resolve_profile_id(x_profile_id, db)
+    return _get_continue_watching_items(db, limit=20, profile_id=profile_id)
 
 
 @router.get("/home")
-def home(db: Session = Depends(get_db)):
+def home(
+    x_profile_id: Optional[int] = Header(None, alias="X-Profile-ID"),
+    db: Session = Depends(get_db)
+):
+    profile_id = _resolve_profile_id(x_profile_id, db)
     # All items for featured
     all_movies = db.query(Movie).all()
     all_series = db.query(TVSeries).all()
 
-    all_items = [_movie_out(m, db) for m in all_movies] + [_series_out(s, db) for s in all_series]
+    all_items = [_movie_out(m, db, profile_id) for m in all_movies] + [_series_out(s, db, False, profile_id) for s in all_series]
     featured = random.sample(all_items, min(5, len(all_items)))
 
-    # Rails
-    continue_watching_items = _get_continue_watching_items(db, limit=20)
+    # Rails scoped to active profile
+    continue_watching_items = _get_continue_watching_items(db, limit=20, profile_id=profile_id)
 
     recent_movies = db.query(Movie).order_by(Movie.added_at.desc()).limit(10).all()
     recent_series = db.query(TVSeries).order_by(TVSeries.added_at.desc()).limit(10).all()
     recently_added_items = (
-        [_movie_out(m, db) for m in recent_movies] +
-        [_series_out(s, db) for s in recent_series]
+        [_movie_out(m, db, profile_id) for m in recent_movies] +
+        [_series_out(s, db, False, profile_id) for s in recent_series]
     )
     recently_added_items.sort(key=lambda x: x["added_at"], reverse=True)
 
     movies_rail = db.query(Movie).order_by(Movie.vote_average.desc().nullslast()).limit(20).all()
-
     series_rail = db.query(TVSeries).order_by(TVSeries.added_at.desc()).limit(20).all()
 
-    # Watchlist
-    watchlist_items_raw = db.query(Watchlist).order_by(Watchlist.added_at.desc()).limit(20).all()
+    # Watchlist scoped to active profile
+    watchlist_items_raw = (
+        db.query(Watchlist)
+        .filter(Watchlist.profile_id == profile_id)
+        .order_by(Watchlist.added_at.desc())
+        .limit(20)
+        .all()
+    )
     watchlist_items = []
     for w in watchlist_items_raw:
         if w.media_type == "movie":
             m = db.query(Movie).filter(Movie.id == w.media_id).first()
             if m:
-                watchlist_items.append(_movie_out(m, db))
+                watchlist_items.append(_movie_out(m, db, profile_id))
         elif w.media_type == "series":
             s = db.query(TVSeries).filter(TVSeries.id == w.media_id).first()
             if s:
-                watchlist_items.append(_series_out(s, db))
+                watchlist_items.append(_series_out(s, db, False, profile_id))
 
     return {
         "featured": featured,
         "rails": {
             "continue_watching": continue_watching_items,
             "recently_added": recently_added_items[:20],
-            "popular_movies": [_movie_out(m, db) for m in movies_rail],
-            "all_series": [_series_out(s, db) for s in series_rail],
+            "popular_movies": [_movie_out(m, db, profile_id) for m in movies_rail],
+            "all_series": [_series_out(s, db, False, profile_id) for s in series_rail],
             "watchlist": watchlist_items,
         },
     }
 
 
 @router.post("/watched")
-def mark_watched(body: MarkWatchedRequest, db: Session = Depends(get_db)):
-    """Mark a movie, episode, season, or entire series as watched."""
+def mark_watched(
+    body: MarkWatchedRequest,
+    x_profile_id: Optional[int] = Header(None, alias="X-Profile-ID"),
+    db: Session = Depends(get_db)
+):
+    """Mark a movie, episode, season, or entire series as watched for the active profile."""
+    profile_id = _resolve_profile_id(x_profile_id, db)
     now = datetime.now(timezone.utc)
     if body.media_type == "movie":
         movie = db.query(Movie).filter(Movie.id == body.media_id).first()
         if not movie:
             raise HTTPException(status_code=404, detail="Movie not found")
         dur = float((movie.runtime or 90) * 60)
-        hist = db.query(WatchHistory).filter(WatchHistory.media_type == "movie", WatchHistory.media_id == body.media_id).first()
+        hist = db.query(WatchHistory).filter(
+            WatchHistory.profile_id == profile_id,
+            WatchHistory.media_type == "movie",
+            WatchHistory.media_id == body.media_id
+        ).first()
         if not hist:
-            hist = WatchHistory(media_type="movie", media_id=body.media_id)
+            hist = WatchHistory(profile_id=profile_id, media_type="movie", media_id=body.media_id)
             db.add(hist)
         hist.position_seconds = dur
         hist.duration_seconds = dur
@@ -649,9 +741,13 @@ def mark_watched(body: MarkWatchedRequest, db: Session = Depends(get_db)):
         if not ep:
             raise HTTPException(status_code=404, detail="Episode not found")
         dur = float((ep.runtime or 45) * 60)
-        hist = db.query(WatchHistory).filter(WatchHistory.media_type == "episode", WatchHistory.media_id == body.media_id).first()
+        hist = db.query(WatchHistory).filter(
+            WatchHistory.profile_id == profile_id,
+            WatchHistory.media_type == "episode",
+            WatchHistory.media_id == body.media_id
+        ).first()
         if not hist:
-            hist = WatchHistory(media_type="episode", media_id=body.media_id)
+            hist = WatchHistory(profile_id=profile_id, media_type="episode", media_id=body.media_id)
             db.add(hist)
         hist.position_seconds = dur
         hist.duration_seconds = dur
@@ -664,9 +760,13 @@ def mark_watched(body: MarkWatchedRequest, db: Session = Depends(get_db)):
         eps = db.query(Episode).filter(Episode.season_id == body.media_id).all()
         for ep in eps:
             dur = float((ep.runtime or 45) * 60)
-            hist = db.query(WatchHistory).filter(WatchHistory.media_type == "episode", WatchHistory.media_id == ep.id).first()
+            hist = db.query(WatchHistory).filter(
+                WatchHistory.profile_id == profile_id,
+                WatchHistory.media_type == "episode",
+                WatchHistory.media_id == ep.id
+            ).first()
             if not hist:
-                hist = WatchHistory(media_type="episode", media_id=ep.id)
+                hist = WatchHistory(profile_id=profile_id, media_type="episode", media_id=ep.id)
                 db.add(hist)
             hist.position_seconds = dur
             hist.duration_seconds = dur
@@ -679,9 +779,13 @@ def mark_watched(body: MarkWatchedRequest, db: Session = Depends(get_db)):
         eps = db.query(Episode).filter(Episode.series_id == body.media_id).all()
         for ep in eps:
             dur = float((ep.runtime or 45) * 60)
-            hist = db.query(WatchHistory).filter(WatchHistory.media_type == "episode", WatchHistory.media_id == ep.id).first()
+            hist = db.query(WatchHistory).filter(
+                WatchHistory.profile_id == profile_id,
+                WatchHistory.media_type == "episode",
+                WatchHistory.media_id == ep.id
+            ).first()
             if not hist:
-                hist = WatchHistory(media_type="episode", media_id=ep.id)
+                hist = WatchHistory(profile_id=profile_id, media_type="episode", media_id=ep.id)
                 db.add(hist)
             hist.position_seconds = dur
             hist.duration_seconds = dur
@@ -691,19 +795,26 @@ def mark_watched(body: MarkWatchedRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid media_type")
 
     db.commit()
-    return {"status": "marked_watched", "media_type": body.media_type, "media_id": body.media_id}
+    return {"status": "marked_watched", "media_type": body.media_type, "media_id": body.media_id, "profile_id": profile_id}
 
 
 @router.post("/unwatched")
-def mark_unwatched(body: MarkWatchedRequest, db: Session = Depends(get_db)):
-    """Mark a movie, episode, season, or entire series as unwatched."""
+def mark_unwatched(
+    body: MarkWatchedRequest,
+    x_profile_id: Optional[int] = Header(None, alias="X-Profile-ID"),
+    db: Session = Depends(get_db)
+):
+    """Mark a movie, episode, season, or entire series as unwatched for the active profile."""
+    profile_id = _resolve_profile_id(x_profile_id, db)
     if body.media_type == "movie":
         db.query(WatchHistory).filter(
+            WatchHistory.profile_id == profile_id,
             WatchHistory.media_type == "movie",
             WatchHistory.media_id == body.media_id
         ).delete(synchronize_session=False)
     elif body.media_type == "episode":
         db.query(WatchHistory).filter(
+            WatchHistory.profile_id == profile_id,
             WatchHistory.media_type == "episode",
             WatchHistory.media_id == body.media_id
         ).delete(synchronize_session=False)
@@ -712,6 +823,7 @@ def mark_unwatched(body: MarkWatchedRequest, db: Session = Depends(get_db)):
         ep_ids = [e[0] for e in eps]
         if ep_ids:
             db.query(WatchHistory).filter(
+                WatchHistory.profile_id == profile_id,
                 WatchHistory.media_type == "episode",
                 WatchHistory.media_id.in_(ep_ids)
             ).delete(synchronize_session=False)
@@ -720,6 +832,7 @@ def mark_unwatched(body: MarkWatchedRequest, db: Session = Depends(get_db)):
         ep_ids = [e[0] for e in eps]
         if ep_ids:
             db.query(WatchHistory).filter(
+                WatchHistory.profile_id == profile_id,
                 WatchHistory.media_type == "episode",
                 WatchHistory.media_id.in_(ep_ids)
             ).delete(synchronize_session=False)
@@ -727,7 +840,7 @@ def mark_unwatched(body: MarkWatchedRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid media_type")
 
     db.commit()
-    return {"status": "marked_unwatched", "media_type": body.media_type, "media_id": body.media_id}
+    return {"status": "marked_unwatched", "media_type": body.media_type, "media_id": body.media_id, "profile_id": profile_id}
 
 
 @router.get("/stats")

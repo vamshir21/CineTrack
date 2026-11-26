@@ -19,11 +19,19 @@ import {
   RotateCcw,
   Sun,
   Moon,
+  Smartphone,
+  Shield,
+  Users,
+  Eye,
 } from 'lucide-react';
 import { applyTheme, getInitialTheme, type ThemeMode } from '../utils/themeUtils';
+import { useProfileStore, getAvatarPreset } from '../store/profileStore';
+import { LanConnectModal } from '../components/modals/LanConnectModal';
 
 export const SettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const { activeProfile, setProfileSelectorOpen } = useProfileStore();
+  const [isLanModalOpen, setIsLanModalOpen] = useState(false);
   const [newFolderPath, setNewFolderPath] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
   const [folderError, setFolderError] = useState('');
@@ -272,8 +280,85 @@ export const SettingsPage: React.FC = () => {
           )}
         </div>
 
-        {/* 1. Media Library Folders & Scanning */}
-        <div className="bg-[#1c1c1c] border border-neutral-800 rounded-xl p-6 space-y-6">
+        {/* Local Network (LAN) & Multi-Profile Section */}
+        <div className="bg-[#1c1c1c] border border-neutral-800 rounded-xl p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30">
+                <Smartphone className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">Local Network (LAN) & Profiles</h2>
+                <p className="text-xs text-neutral-400">Stream on mobile phones, smart TVs, and tablets connected to your Wi-Fi</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsLanModalOpen(true)}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-lg text-xs transition-colors shadow"
+              >
+                <Wifi className="w-3.5 h-3.5" />
+                <span>Stream on Phone & TV</span>
+              </button>
+              <button
+                onClick={() => setProfileSelectorOpen(true)}
+                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 font-bold px-4 py-2 rounded-lg text-xs transition-colors"
+              >
+                <Users className="w-3.5 h-3.5 text-netflix" />
+                <span>Switch Profile</span>
+              </button>
+            </div>
+          </div>
+
+          {activeProfile && (
+            <div className="flex items-center justify-between p-3.5 bg-neutral-900/80 border border-neutral-800 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-lg ${getAvatarPreset(activeProfile.avatar).bg} flex items-center justify-center text-xl shadow flex-shrink-0`}
+                >
+                  <span>{getAvatarPreset(activeProfile.avatar).icon}</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-white">{activeProfile.name}</span>
+                    {activeProfile.is_admin ? (
+                      <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                        <Shield className="w-3 h-3 fill-amber-400" />
+                        Admin Profile
+                      </span>
+                    ) : (
+                      <span className="bg-neutral-800 text-neutral-300 border border-neutral-700 text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                        <Eye className="w-3 h-3" />
+                        Viewer Profile (Read-Only)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-neutral-400 mt-0.5">
+                    {activeProfile.is_admin
+                      ? 'Administrator privileges: Media folders, scanning, TMDB matching, and deletion permitted.'
+                      : 'Viewer privileges: Streaming, personal watchlist, and continue watching enabled. Deletion and file management disabled.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {!activeProfile?.is_admin ? (
+          <div className="bg-[#1c1c1c] border border-amber-900/40 rounded-xl p-6 text-neutral-300">
+            <div className="flex items-center gap-3 mb-2">
+              <Shield className="w-5 h-5 text-amber-400" />
+              <h2 className="text-lg font-bold text-white">Administrator Controlled Settings</h2>
+            </div>
+            <p className="text-xs text-neutral-400 leading-relaxed">
+              You are currently viewing as <strong>{activeProfile?.name || 'Viewer'}</strong>. Media library folder registration, filesystem rescanning, and TMDB API configurations can only be modified by the Administrator.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* 1. Media Library Folders & Scanning */}
+            <div className="bg-[#1c1c1c] border border-neutral-800 rounded-xl p-6 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Folder className="w-5 h-5 text-netflix" />
@@ -442,6 +527,8 @@ export const SettingsPage: React.FC = () => {
             </p>
           </div>
         </div>
+        </>
+        )}
 
         {/* 3. Playback Preferences & Episode Automation */}
         <div className="bg-[#1c1c1c] border border-neutral-800 rounded-xl p-6 space-y-6">
@@ -799,6 +886,12 @@ export const SettingsPage: React.FC = () => {
             Application Logs: <span className="font-mono text-neutral-200">~/.cinetrack/cinetrack.log</span>
           </p>
         </div>
+
+        {/* LAN Connection QR Modal */}
+        <LanConnectModal
+          isOpen={isLanModalOpen}
+          onClose={() => setIsLanModalOpen(false)}
+        />
       </div>
     </div>
   );

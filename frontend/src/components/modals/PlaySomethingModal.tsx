@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Shuffle, X, Star, Calendar, Sparkles } from 'lucide-react';
 import { libraryApi } from '../../api/library';
-import { playbackApi } from '../../api/playback';
 import { getImageUrl } from '../../utils/imageUtils';
+import { usePlayMedia } from '../../hooks/usePlayMedia';
 import type { MediaItem, TVSeries } from '../../types';
 import { isMovie } from '../../types';
 
@@ -16,6 +16,7 @@ export const PlaySomethingModal: React.FC<PlaySomethingModalProps> = ({ isOpen, 
   const [item, setItem] = useState<MediaItem | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const { playMovie, playEpisode } = usePlayMedia();
 
   const pickRandom = async (excludeId?: number) => {
     setIsLoading(true);
@@ -42,19 +43,11 @@ export const PlaySomethingModal: React.FC<PlaySomethingModalProps> = ({ isOpen, 
     if (!item) return;
 
     if (isMovie(item)) {
-      if (!item.file_path) return;
-      await playbackApi.play({
-        file_path: item.file_path,
-        position: item.progress?.position || 0,
-        media_type: 'movie',
-        media_id: item.id,
-      });
+      playMovie(item);
       onClose();
     } else {
       const series = item as TVSeries;
-      let targetFile = '';
-      let targetEpId = 0;
-      let pos = 0;
+      let targetEp: any = null;
 
       // Find first episode
       try {
@@ -63,20 +56,13 @@ export const PlaySomethingModal: React.FC<PlaySomethingModalProps> = ({ isOpen, 
         if (s1) {
           const eps = await libraryApi.getSeasonEpisodes(series.id, s1.season_number);
           if (eps && eps.length > 0) {
-            targetFile = eps[0].file_path || '';
-            targetEpId = eps[0].id;
-            pos = eps[0].progress?.position || 0;
+            targetEp = eps[0];
           }
         }
       } catch {}
 
-      if (targetFile) {
-        await playbackApi.play({
-          file_path: targetFile,
-          position: pos,
-          media_type: 'episode',
-          media_id: targetEpId,
-        });
+      if (targetEp) {
+        playEpisode(targetEp, series);
         onClose();
       }
     }

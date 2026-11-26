@@ -244,7 +244,8 @@ class TestPlaybackAndWatchlist(unittest.TestCase):
         from backend.models import Movie
         client = TestClient(app)
         # Add a dummy movie
-        m = Movie(title="RandomTestMovie", file_path="/movies/random.mkv")
+        import uuid
+        m = Movie(title="RandomTestMovie", file_path=f"/movies/random_{uuid.uuid4().hex[:8]}.mkv")
         self.db.add(m)
         self.db.commit()
 

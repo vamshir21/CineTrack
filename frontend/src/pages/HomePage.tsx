@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { libraryApi } from '../api/library';
-import { playbackApi } from '../api/playback';
 import { HeroSection } from '../components/hero/HeroSection';
 import { ContentRail } from '../components/rails/ContentRail';
 import { CollectionRail } from '../components/rails/CollectionRail';
@@ -12,6 +11,7 @@ import { MovieDetailModal } from '../components/modals/MovieDetailModal';
 import { CollectionDetailModal } from '../components/modals/CollectionDetailModal';
 import { VibeSurpriseModal } from '../components/modals/VibeSurpriseModal';
 import { usePlaybackStore } from '../store/playbackStore';
+import { usePlayMedia } from '../hooks/usePlayMedia';
 import type { MediaItem, Movie, TVSeries, Episode } from '../types';
 import { isMovie } from '../types';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
@@ -24,6 +24,7 @@ export const HomePage: React.FC = () => {
   const [vibeSurpriseOpen, setVibeSurpriseOpen] = useState(false);
   const [surpriseVibeKey, setSurpriseVibeKey] = useState<string | null>(null);
   const { setPlayerOpen } = usePlaybackStore();
+  const { playMedia, playEpisode } = usePlayMedia();
 
   const { data: homeData, isLoading, error } = useQuery({
     queryKey: ['home'],
@@ -41,24 +42,12 @@ export const HomePage: React.FC = () => {
     const rawItem = item as any;
     const isEp = rawItem.media_type === 'episode' || 'season_number' in rawItem || 'series_id' in rawItem;
     if (isEp) {
-      if (!rawItem.file_path) return;
-      await playbackApi.play({
-        file_path: rawItem.file_path,
-        position: rawItem.progress?.position || 0,
-        media_type: 'episode',
-        media_id: rawItem.id,
-      });
+      playEpisode(rawItem as Episode);
       return;
     }
 
     if (isMovie(item)) {
-      if (!item.file_path) return;
-      await playbackApi.play({
-        file_path: item.file_path,
-        position: item.progress?.position || 0,
-        media_type: 'movie',
-        media_id: item.id,
-      });
+      playMedia(item);
     } else {
       // For series, open detail modal so user can pick episode or resume
       setSelectedSeries(item);
@@ -66,13 +55,7 @@ export const HomePage: React.FC = () => {
   };
 
   const handlePlayEpisode = async (ep: Episode) => {
-    if (!ep.file_path) return;
-    await playbackApi.play({
-      file_path: ep.file_path,
-      position: ep.progress?.position || 0,
-      media_type: 'episode',
-      media_id: ep.id,
-    });
+    playEpisode(ep, selectedSeries || undefined);
     setPlayerOpen(true);
   };
 

@@ -18,6 +18,7 @@ import { MoreLikeThisGrid } from '../common/MoreLikeThisGrid';
 import { TrailerPlayer } from '../common/TrailerPlayer';
 import { RatingBadges } from '../common/RatingBadges';
 import { PersonDetailModal } from './PersonDetailModal';
+import { useProfileStore } from '../../store/profileStore';
 
 interface MovieDetailModalProps {
   movie: Movie | null;
@@ -33,6 +34,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   onSelectMovie,
 }) => {
   const queryClient = useQueryClient();
+  const { activeProfile } = useProfileStore();
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
@@ -245,23 +247,27 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                   <span>{isWatched ? 'Watched' : 'Mark Watched'}</span>
                 </button>
 
-                <button
-                  onClick={() => setShowMatchModal(true)}
-                  className="flex items-center gap-1.5 bg-neutral-800/80 hover:bg-neutral-700 text-neutral-300 hover:text-white font-medium px-3.5 py-2.5 rounded border border-white/20 transition-colors text-sm"
-                  title="Search & match on TMDB"
-                >
-                  <Sparkles className="w-4 h-4 text-yellow-400" />
-                  <span>{movie.tmdb_id ? 'Fix Match' : 'Match TMDB'}</span>
-                </button>
+                {activeProfile?.is_admin && (
+                  <button
+                    onClick={() => setShowMatchModal(true)}
+                    className="flex items-center gap-1.5 bg-neutral-800/80 hover:bg-neutral-700 text-neutral-300 hover:text-white font-medium px-3.5 py-2.5 rounded border border-white/20 transition-colors text-sm"
+                    title="Search & match on TMDB"
+                  >
+                    <Sparkles className="w-4 h-4 text-yellow-400" />
+                    <span>{movie.tmdb_id ? 'Fix Match' : 'Match TMDB'}</span>
+                  </button>
+                )}
 
-                <button
-                  onClick={() => setShowDeleteModal(true)}
-                  className="flex items-center gap-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-400 hover:text-red-300 font-medium px-3.5 py-2.5 rounded border border-red-800/50 transition-colors text-sm ml-auto"
-                  title="Delete movie from library"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Delete</span>
-                </button>
+                {activeProfile?.is_admin && (
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="flex items-center gap-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-400 hover:text-red-300 font-medium px-3.5 py-2.5 rounded border border-red-800/50 transition-colors text-sm ml-auto"
+                    title="Delete movie from library"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

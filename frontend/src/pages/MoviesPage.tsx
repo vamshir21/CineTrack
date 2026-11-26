@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { libraryApi } from '../api/library';
-import { playbackApi } from '../api/playback';
 import { MediaCard } from '../components/cards/MediaCard';
 import { MovieDetailModal } from '../components/modals/MovieDetailModal';
 import { CollectionRail } from '../components/rails/CollectionRail';
 import { CollectionDetailModal } from '../components/modals/CollectionDetailModal';
 import { usePlaybackStore } from '../store/playbackStore';
+import { usePlayMedia } from '../hooks/usePlayMedia';
 import type { Movie } from '../types';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 
@@ -17,6 +17,7 @@ export const MoviesPage: React.FC = () => {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('recent');
   const { setPlayerOpen } = usePlaybackStore();
+  const { playMovie } = usePlayMedia();
 
   const { data: movies, isLoading } = useQuery({
     queryKey: ['movies'],
@@ -67,13 +68,7 @@ export const MoviesPage: React.FC = () => {
   }, [movies, selectedGenre, selectedLanguage, sortBy]);
 
   const handlePlay = async (movie: Movie) => {
-    if (!movie.file_path) return;
-    await playbackApi.play({
-      file_path: movie.file_path,
-      position: movie.progress?.position || 0,
-      media_type: 'movie',
-      media_id: movie.id,
-    });
+    playMovie(movie);
     setPlayerOpen(true);
   };
 

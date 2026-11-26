@@ -18,6 +18,7 @@ import { MoreLikeThisGrid } from '../common/MoreLikeThisGrid';
 import { TrailerPlayer } from '../common/TrailerPlayer';
 import { RatingBadges } from '../common/RatingBadges';
 import { PersonDetailModal } from './PersonDetailModal';
+import { useProfileStore } from '../../store/profileStore';
 
 interface SeriesDetailModalProps {
   series: TVSeries | null;
@@ -33,6 +34,7 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
   onSelectSeries,
 }) => {
   const queryClient = useQueryClient();
+  const { activeProfile } = useProfileStore();
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [showSeriesDeleteModal, setShowSeriesDeleteModal] = useState(false);
@@ -323,23 +325,27 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
                   <span>{displayData.progress?.completed ? 'Watched' : 'Mark Watched'}</span>
                 </button>
 
-                <button
-                  onClick={() => setShowMatchModal(true)}
-                  className="flex items-center gap-1.5 bg-neutral-800/80 hover:bg-neutral-700 text-neutral-300 hover:text-white font-medium px-3.5 py-2.5 rounded border border-white/20 transition-colors text-sm"
-                  title="Search & match on TMDB"
-                >
-                  <Sparkles className="w-4 h-4 text-yellow-400" />
-                  <span>{displayData.tmdb_id ? 'Fix Match' : 'Match TMDB'}</span>
-                </button>
+                {activeProfile?.is_admin && (
+                  <button
+                    onClick={() => setShowMatchModal(true)}
+                    className="flex items-center gap-1.5 bg-neutral-800/80 hover:bg-neutral-700 text-neutral-300 hover:text-white font-medium px-3.5 py-2.5 rounded border border-white/20 transition-colors text-sm"
+                    title="Search & match on TMDB"
+                  >
+                    <Sparkles className="w-4 h-4 text-yellow-400" />
+                    <span>{displayData.tmdb_id ? 'Fix Match' : 'Match TMDB'}</span>
+                  </button>
+                )}
 
-                <button
-                  onClick={() => setShowSeriesDeleteModal(true)}
-                  className="flex items-center gap-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-400 hover:text-red-300 font-medium px-3.5 py-2.5 rounded border border-red-800/50 transition-colors text-sm ml-auto"
-                  title="Delete series from library"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Delete Series</span>
-                </button>
+                {activeProfile?.is_admin && (
+                  <button
+                    onClick={() => setShowSeriesDeleteModal(true)}
+                    className="flex items-center gap-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-400 hover:text-red-300 font-medium px-3.5 py-2.5 rounded border border-red-800/50 transition-colors text-sm ml-auto"
+                    title="Delete series from library"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete Series</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -529,18 +535,20 @@ export const SeriesDetailModal: React.FC<SeriesDetailModalProps> = ({
                               >
                                 <CheckCircle2 className="w-4 h-4" />
                               </button>
-                              {/* Delete episode button */}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEpisodeToDelete(ep);
-                                }}
-                                className="p-1.5 rounded text-neutral-500 hover:text-red-400 hover:bg-red-950/40 transition opacity-0 group-hover:opacity-100"
-                                title="Delete Episode"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {/* Delete episode button (admin only) */}
+                              {activeProfile?.is_admin && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEpisodeToDelete(ep);
+                                  }}
+                                  className="p-1.5 rounded text-neutral-500 hover:text-red-400 hover:bg-red-950/40 transition opacity-0 group-hover:opacity-100"
+                                  title="Delete Episode"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </div>
                           <p className="text-xs sm:text-sm text-neutral-400 line-clamp-2 mt-1 leading-relaxed">

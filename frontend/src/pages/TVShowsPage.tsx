@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { libraryApi } from '../api/library';
-import { playbackApi } from '../api/playback';
 import { MediaCard } from '../components/cards/MediaCard';
 import { SeriesDetailModal } from '../components/modals/SeriesDetailModal';
 import { usePlaybackStore } from '../store/playbackStore';
+import { usePlayMedia } from '../hooks/usePlayMedia';
 import type { TVSeries, Episode } from '../types';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 
@@ -14,6 +14,7 @@ export const TVShowsPage: React.FC = () => {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('recent');
   const { setPlayerOpen } = usePlaybackStore();
+  const { playEpisode } = usePlayMedia();
 
   const { data: seriesList, isLoading } = useQuery({
     queryKey: ['series'],
@@ -58,13 +59,7 @@ export const TVShowsPage: React.FC = () => {
   }, [seriesList, selectedGenre, selectedLanguage, sortBy]);
 
   const handlePlayEpisode = async (ep: Episode) => {
-    if (!ep.file_path) return;
-    await playbackApi.play({
-      file_path: ep.file_path,
-      position: ep.progress?.position || 0,
-      media_type: 'episode',
-      media_id: ep.id,
-    });
+    playEpisode(ep, selectedSeries || undefined);
     setPlayerOpen(true);
   };
 

@@ -73,7 +73,7 @@ app.add_middleware(
 app.mount("/api/images", StaticFiles(directory=str(ARTWORK_DIR), html=False), name="images")
 
 # ── Routers ────────────────────────────────────────────────────────────────────
-from backend.routers import media, playback, tmdb, settings, search, watchlist, scanner  # noqa: E402
+from backend.routers import media, playback, tmdb, settings, search, watchlist, scanner, profiles, stream, lan  # noqa: E402
 
 app.include_router(media.router)
 app.include_router(scanner.router)
@@ -82,6 +82,9 @@ app.include_router(settings.router)
 app.include_router(search.router)
 app.include_router(watchlist.router)
 app.include_router(playback.router)
+app.include_router(profiles.router)
+app.include_router(stream.router)
+app.include_router(lan.router)
 
 
 # ── Health check ─────────────────────────────────────────────────────────────

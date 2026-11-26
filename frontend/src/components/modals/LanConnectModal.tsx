@@ -1,0 +1,166 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Smartphone, Copy, Check, Tv, Wifi } from 'lucide-react';
+import QRCode from 'qrcode';
+import { useQuery } from '@tanstack/react-query';
+import { lanApi } from '../../api/lan';
+
+interface LanConnectModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const LanConnectModal: React.FC<LanConnectModalProps> = ({ isOpen, onClose }) => {
+  const [copied, setCopied] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+
+  const { data: lanInfo, isLoading } = useQuery({
+    queryKey: ['lan-info'],
+    queryFn: lanApi.getInfo,
+    enabled: isOpen,
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const lanUrl = lanInfo?.lan_url || `http://${window.location.hostname}:8088`;
+
+  useEffect(() => {
+    if (isOpen && lanUrl) {
+      QRCode.toDataURL(lanUrl, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff',
+        },
+      })
+        .then((url) => setQrDataUrl(url))
+        .catch((err) => console.error('Failed to generate QR code:', err));
+    }
+  }, [isOpen, lanUrl]);
+
+  if (!isOpen) return null;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(lanUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+          className="relative w-full max-w-lg bg-[#181818] border border-neutral-700/80 rounded-2xl p-6 sm:p-8 shadow-2xl text-white"
+        >
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 rounded-full text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          {/* Header */}
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30">
+              <Smartphone className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight">Stream on Phone & TV</h2>
+              <p className="text-xs text-neutral-400 flex items-center gap-1.5 mt-0.5">
+                <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+                Local Network (LAN) Storage & Streaming
+              </p>
+            </div>
+          </div>
+
+          <p className="text-xs text-neutral-300 mt-2 mb-6">
+            Anyone connected to your home Wi-Fi can stream movies and TV shows directly in their mobile or TV browser with zero lag and instant seeking.
+          </p>
+
+          {/* QR Code Card */}
+          <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-xl bg-neutral-900/90 border border-neutral-800 mb-6">
+            <div className="p-3 bg-white rounded-xl shadow-lg flex-shrink-0">
+              {qrDataUrl ? (
+                <img src={qrDataUrl} alt="CineTrack LAN QR Code" className="w-36 h-36 rounded-md" />
+              ) : (
+                <div className="w-36 h-36 flex items-center justify-center bg-neutral-100 text-neutral-400 text-xs">
+                  {isLoading ? 'Detecting LAN...' : 'Generating QR...'}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3 text-left flex-1 min-w-0">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block mb-1">
+                  Connect URL
+                </span>
+                <div className="flex items-center gap-2 bg-black/60 border border-neutral-700 px-3 py-2 rounded-lg">
+                  <span className="font-mono text-xs text-emerald-400 truncate flex-1">{lanUrl}</span>
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-1 text-xs font-bold px-2 py-1 bg-neutral-800 hover:bg-neutral-700 text-white rounded transition-colors flex-shrink-0"
+                    title="Copy URL"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="text-[11px] text-neutral-400 space-y-1">
+                <p>• <strong>iPhone / Android</strong>: Open Camera & scan QR code</p>
+                <p>• <strong>Smart TV / Laptop</strong>: Type URL in your browser</p>
+              </div>
+            </div>
+          </div>
+
+          {/* How it works features */}
+          <div className="grid grid-cols-2 gap-3 text-left mb-6">
+            <div className="p-3 rounded-lg bg-neutral-900/50 border border-neutral-800/80">
+              <div className="flex items-center gap-2 text-xs font-bold text-white mb-1">
+                <Smartphone className="w-4 h-4 text-netflix" />
+                Mobile PWA Ready
+              </div>
+              <p className="text-[11px] text-neutral-400 leading-relaxed">
+                Tap "Add to Home Screen" in Safari or Chrome for a full-screen, native app feel.
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-neutral-900/50 border border-neutral-800/80">
+              <div className="flex items-center gap-2 text-xs font-bold text-white mb-1">
+                <Tv className="w-4 h-4 text-netflix" />
+                Smart TV Friendly
+              </div>
+              <p className="text-[11px] text-neutral-400 leading-relaxed">
+                Works in LG webOS, Samsung Tizen, and FireTV browsers with fullscreen mode.
+              </p>
+            </div>
+          </div>
+
+          {/* Close / Action */}
+          <div className="flex items-center justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-5 py-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};

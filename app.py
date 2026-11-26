@@ -18,17 +18,17 @@ VENV_PYTHON = APP_DIR / "venv" / "bin" / "python"
 if not VENV_PYTHON.exists():
     VENV_PYTHON = Path(sys.executable)
 
-def find_available_port(preferred=8000, fallback=8088):
+def find_available_port(preferred=8088, fallback=8089):
     """Find a guaranteed available port to bind to."""
-    for port in [preferred, fallback, 8089, 8090, 8091, 8092]:
+    for port in [preferred, fallback, 8000, 8090, 8091, 8092]:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             try:
-                s.bind(("127.0.0.1", port))
+                s.bind(("0.0.0.0", port))
                 return port
             except OSError:
                 continue
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
+        s.bind(("0.0.0.0", 0))
         return s.getsockname()[1]
 
 PORT = find_available_port()
@@ -54,7 +54,7 @@ def run_backend(port):
         str(VENV_PYTHON),
         "-m", "uvicorn",
         "backend.main:app",
-        "--host", "127.0.0.1",
+        "--host", "0.0.0.0",
         "--port", str(port),
         "--log-level", "warning",
     ]

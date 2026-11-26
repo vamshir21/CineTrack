@@ -115,10 +115,21 @@ class Episode(Base):
     season: Mapped["Season | None"] = relationship("Season", back_populates="episodes")
 
 
+class Profile(Base):
+    __tablename__ = "profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    avatar: Mapped[str] = mapped_column(String, default="netflix-red")
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now)
+
+
 class WatchHistory(Base):
     __tablename__ = "watch_history"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    profile_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("profiles.id", ondelete="CASCADE"), nullable=True, index=True)
     media_type: Mapped[str] = mapped_column(String, nullable=False)  # 'movie' or 'episode'
     media_id: Mapped[int] = mapped_column(Integer, nullable=False)
     position_seconds: Mapped[float] = mapped_column(Float, default=0.0)
@@ -131,6 +142,7 @@ class Watchlist(Base):
     __tablename__ = "watchlist"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    profile_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("profiles.id", ondelete="CASCADE"), nullable=True, index=True)
     media_type: Mapped[str] = mapped_column(String, nullable=False)  # 'movie' or 'series'
     media_id: Mapped[int] = mapped_column(Integer, nullable=False)
     added_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now)

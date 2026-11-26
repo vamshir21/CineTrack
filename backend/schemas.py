@@ -208,3 +208,25 @@ class TMDBCandidate(BaseModel):
 class HomeResponse(BaseModel):
     featured: list[Any] = []
     rails: dict[str, list[Any]] = {}
+
+
+# ── Profile ───────────────────────────────────────────────────────────────────
+class ProfileCreate(BaseModel):
+    name: str
+    avatar: str = "netflix-red"
+    is_admin: bool = False
+
+
+class ProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    avatar: Optional[str] = None
+
+
+class ProfileOut(BaseModel):
+    id: int
+    name: str
+    avatar: str
+    is_admin: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

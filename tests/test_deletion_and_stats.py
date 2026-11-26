@@ -190,8 +190,10 @@ class TestDeletionAndStats(unittest.TestCase):
         db.commit()
         db.refresh(season)
 
-        ep1 = Episode(series_id=series.id, season_id=season.id, season_number=1, episode_number=1, title="E1", file_path="/tmp/e1.mkv")
-        ep2 = Episode(series_id=series.id, season_id=season.id, season_number=1, episode_number=2, title="E2", file_path="/tmp/e2.mkv")
+        ep1_path = tempfile.mktemp(suffix=".mkv")
+        ep2_path = tempfile.mktemp(suffix=".mkv")
+        ep1 = Episode(series_id=series.id, season_id=season.id, season_number=1, episode_number=1, title="E1", file_path=ep1_path)
+        ep2 = Episode(series_id=series.id, season_id=season.id, season_number=1, episode_number=2, title="E2", file_path=ep2_path)
         db.add_all([ep1, ep2])
         db.commit()
         db.refresh(ep1)

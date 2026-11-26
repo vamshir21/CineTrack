@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { watchlistApi } from '../api/watchlist';
-import { playbackApi } from '../api/playback';
 import { MediaCard } from '../components/cards/MediaCard';
 import { MovieDetailModal } from '../components/modals/MovieDetailModal';
 import { SeriesDetailModal } from '../components/modals/SeriesDetailModal';
 import { usePlaybackStore } from '../store/playbackStore';
+import { usePlayMedia } from '../hooks/usePlayMedia';
 import type { MediaItem, Movie, TVSeries, Episode } from '../types';
 import { isMovie } from '../types';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
@@ -18,6 +18,7 @@ export const WatchlistPage: React.FC = () => {
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
   const [selectedSeries, setSelectedSeries] = useState<TVSeries | null>(null);
   const { setPlayerOpen } = usePlaybackStore();
+  const { playMedia, playEpisode } = usePlayMedia();
 
   const { data: watchlistData, isLoading, isError, refetch } = useQuery({
     queryKey: ['watchlist'],
@@ -38,13 +39,7 @@ export const WatchlistPage: React.FC = () => {
 
   const handlePlayMedia = async (item: MediaItem) => {
     if (isMovie(item)) {
-      if (!item.file_path) return;
-      await playbackApi.play({
-        file_path: item.file_path,
-        position: item.progress?.position || 0,
-        media_type: 'movie',
-        media_id: item.id,
-      });
+      playMedia(item);
       setPlayerOpen(true);
     } else {
       setSelectedSeries(item);
@@ -52,13 +47,7 @@ export const WatchlistPage: React.FC = () => {
   };
 
   const handlePlayEpisode = async (ep: Episode) => {
-    if (!ep.file_path) return;
-    await playbackApi.play({
-      file_path: ep.file_path,
-      position: ep.progress?.position || 0,
-      media_type: 'episode',
-      media_id: ep.id,
-    });
+    playEpisode(ep, selectedSeries || undefined);
     setPlayerOpen(true);
   };
 

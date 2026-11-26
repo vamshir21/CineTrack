@@ -16,6 +16,16 @@ const client = axios.create({
   },
 });
 
+client.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const profileId = localStorage.getItem('cinetrack_profile_id');
+    if (profileId) {
+      config.headers['X-Profile-ID'] = profileId;
+    }
+  }
+  return config;
+});
+
 client.interceptors.response.use(
   (response) => response,
   (error) => {
