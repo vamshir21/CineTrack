@@ -47,6 +47,9 @@ export const SettingsPage: React.FC = () => {
   });
 
   // Playback & Episode Automation local state
+  const [playerMode, setPlayerMode] = useState<string>(() => {
+    return localStorage.getItem('cinetrack_player_mode') || 'auto';
+  });
   const [autoNextEpisode, setAutoNextEpisode] = useState('true');
   const [nextEpisodeCountdown, setNextEpisodeCountdown] = useState('15');
   const [completionThresholdMinutes, setCompletionThresholdMinutes] = useState('5');
@@ -191,6 +194,7 @@ export const SettingsPage: React.FC = () => {
   const handleSavePlaybackSettings = async () => {
     setIsSavingPlayback(true);
     try {
+      localStorage.setItem('cinetrack_player_mode', playerMode);
       await settingsApi.updateSettingsBatch({
         auto_next_episode: autoNextEpisode,
         next_episode_countdown: nextEpisodeCountdown,
@@ -622,6 +626,31 @@ export const SettingsPage: React.FC = () => {
                 <option value="3">3 minutes before file end</option>
                 <option value="5">5 minutes before file end</option>
                 <option value="10">10 minutes before file end</option>
+              </select>
+            </div>
+
+            {/* Playback Engine Selection */}
+            <div className="space-y-1.5 bg-[#222] p-3.5 rounded-lg border border-neutral-800">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-bold text-white">Playback Engine</label>
+                <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-neutral-800 text-neutral-300">
+                  {playerMode === 'vlc' ? 'VLC NATIVE' : playerMode === 'web' ? 'WEB PLAYER' : 'AUTO (DESKTOP/LAN)'}
+                </span>
+              </div>
+              <p className="text-[11px] text-neutral-400">
+                Auto mode launches native VLC on local Ubuntu desktop (localhost) and the HTML5 web player on phones, tablets & TVs.
+              </p>
+              <select
+                value={playerMode}
+                onChange={(e) => {
+                  setPlayerMode(e.target.value);
+                  localStorage.setItem('cinetrack_player_mode', e.target.value);
+                }}
+                className="w-full bg-[#181818] border border-neutral-700 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-netflix mt-1 cursor-pointer"
+              >
+                <option value="auto">Auto (Native VLC on Desktop, Web Player on Phones & LAN)</option>
+                <option value="vlc">Native VLC Player (Always launch VLC application)</option>
+                <option value="web">In-Browser Web Player (Always stream inside browser)</option>
               </select>
             </div>
 

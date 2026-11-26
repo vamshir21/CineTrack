@@ -371,6 +371,12 @@ class PlaybackService:
             ]
             env = os.environ.copy()
             # Inherit user desktop session environment for Wayland/X11 GUI
+            if "DISPLAY" not in env:
+                env["DISPLAY"] = ":0"
+            if "WAYLAND_DISPLAY" not in env and os.path.exists(f"/run/user/{os.getuid()}/wayland-0"):
+                env["WAYLAND_DISPLAY"] = "wayland-0"
+            if "XDG_RUNTIME_DIR" not in env and os.path.exists(f"/run/user/{os.getuid()}"):
+                env["XDG_RUNTIME_DIR"] = f"/run/user/{os.getuid()}"
             try:
                 self._vlc_process = subprocess.Popen(
                     cmd,

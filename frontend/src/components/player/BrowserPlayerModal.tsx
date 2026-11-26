@@ -25,6 +25,7 @@ import { useBrowserPlayerStore } from '../../store/browserPlayerStore';
 import { streamApi, type TrackItem } from '../../api/stream';
 import { libraryApi } from '../../api/library';
 import { formatTime } from '../../utils/timeUtils';
+import { isLanClient } from '../../hooks/usePlayMedia';
 import type { Episode } from '../../types';
 
 export const BrowserPlayerModal: React.FC = () => {
@@ -91,6 +92,13 @@ export const BrowserPlayerModal: React.FC = () => {
   const [nextEpisode, setNextEpisode] = useState<Episode | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCountdownCancelled, setIsCountdownCancelled] = useState(false);
+
+  // Auto-dismiss in-browser modal on local Ubuntu desktop (where native VLC is preferred)
+  useEffect(() => {
+    if (!isLanClient() && isOpen) {
+      closePlayer();
+    }
+  }, [isOpen, closePlayer]);
 
   // Reset states when media changes
   useEffect(() => {
