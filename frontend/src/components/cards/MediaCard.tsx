@@ -162,7 +162,9 @@ export const MediaCard: React.FC<MediaCardProps> = ({
           const rect = cardRef.current.getBoundingClientRect();
           if (rect.width > 50) setRenderedCardWidth(rect.width);
           const effectiveW = rect.width > 50 ? rect.width : responsiveBaseWidth;
-          const dynamicHoverW = Math.max(isPoster ? 380 : 420, Math.round(effectiveW * 1.35));
+          const dynamicHoverW = isPoster
+            ? Math.max(380, Math.round(effectiveW * 1.35))
+            : Math.max(375, Math.min(410, Math.round(effectiveW * 1.28)));
           const halfExtra = (dynamicHoverW - effectiveW) / 2;
           if (rect.left < halfExtra + 24) setLocalOrigin('left');
           else if (window.innerWidth - rect.right < halfExtra + 24) setLocalOrigin('right');
@@ -199,7 +201,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   const effectiveBaseWidth = cardRef.current?.offsetWidth || renderedCardWidth || responsiveBaseWidth;
   const expandedWidth = isPoster
     ? Math.max(380, Math.round(effectiveBaseWidth * 1.35))
-    : Math.max(420, Math.round(effectiveBaseWidth * 1.3));
+    : Math.max(375, Math.min(410, Math.round(effectiveBaseWidth * 1.28)));
   const centerOffset = Math.round((effectiveBaseWidth - expandedWidth) / 2);
 
   // Resolve expansion position
@@ -298,7 +300,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="absolute z-50 rounded-lg overflow-hidden bg-[#181818] shadow-[0_24px_50px_rgba(0,0,0,0.98)] border border-neutral-700/80 cursor-pointer"
             style={{
-              top: isPoster ? '-26px' : '-22px',
+              top: isPoster ? '-26px' : '-52px',
               width: `${expandedWidth}px`,
               ...(activeOrigin === 'left' && { left: '0px' }),
               ...(activeOrigin === 'right' && { right: '0px' }),

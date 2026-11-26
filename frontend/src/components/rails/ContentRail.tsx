@@ -74,6 +74,7 @@ export const ContentRail: React.FC<ContentRailProps> = ({
   const isPoster = variant === 'poster';
   const expansionWidth = isPoster ? 115 : 90;
   const halfExpansion = Math.round(expansionWidth / 2);
+  const isRailElevated = isRailHovered || hoveredIdx !== null;
 
   const handleCardMouseEnter = (index: number) => {
     if (window.innerWidth < 640) return;
@@ -128,7 +129,7 @@ export const ContentRail: React.FC<ContentRailProps> = ({
 
   return (
     <div
-      className="relative mb-8 group/rail"
+      className={`relative mb-8 group/rail ${isRailElevated ? 'z-30' : 'z-10'}`}
       onMouseEnter={() => setIsRailHovered(true)}
       onMouseLeave={() => {
         setIsRailHovered(false);
@@ -147,7 +148,11 @@ export const ContentRail: React.FC<ContentRailProps> = ({
         {canScrollLeft && (
           <button
             onClick={() => scroll('left')}
-            className={`absolute left-0 top-4 bottom-8 sm:top-8 sm:bottom-16 z-40 w-10 sm:w-12 bg-black/70 hover:bg-black/95 text-white flex items-center justify-center transition-all duration-300 rounded-r backdrop-blur-xs ${
+            className={`absolute left-0 z-40 w-10 sm:w-12 bg-black/70 hover:bg-black/95 text-white flex items-center justify-center transition-all duration-300 rounded-r backdrop-blur-xs ${
+              isPoster
+                ? 'top-3 bottom-6 sm:top-10 sm:bottom-24'
+                : 'top-4 bottom-6 sm:top-16 sm:bottom-56'
+            } ${
               isRailHovered && hoveredIdx === null ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
             aria-label="Scroll Left"
@@ -161,7 +166,11 @@ export const ContentRail: React.FC<ContentRailProps> = ({
           ref={scrollRef}
           onScroll={checkScroll}
           onWheel={handleWheel}
-          className="flex items-center gap-2.5 sm:gap-4 overflow-x-auto scrollbar-none px-4 sm:px-8 md:px-12 pt-4 pb-8 sm:pt-8 sm:pb-16 -mt-2 -mb-6 sm:-mt-4 sm:-mb-10 scroll-smooth no-scrollbar"
+          className={`flex items-center gap-2.5 sm:gap-4 overflow-x-auto scrollbar-none px-4 sm:px-8 md:px-12 scroll-smooth no-scrollbar ${
+            isPoster
+              ? 'pt-3 pb-6 sm:pt-10 sm:pb-24 -mt-2 -mb-4 sm:-mt-6 sm:-mb-16'
+              : 'pt-4 pb-6 sm:pt-16 sm:pb-56 -mt-2 -mb-4 sm:-mt-12 sm:-mb-44'
+          }`}
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {items.map((item, idx) => {
@@ -221,7 +230,11 @@ export const ContentRail: React.FC<ContentRailProps> = ({
         {canScrollRight && (
           <button
             onClick={() => scroll('right')}
-            className={`absolute right-0 top-4 bottom-8 sm:top-8 sm:bottom-14 z-40 w-10 sm:w-12 bg-black/70 hover:bg-black/95 text-white flex items-center justify-center transition-all duration-300 rounded-l backdrop-blur-xs ${
+            className={`absolute right-0 z-40 w-10 sm:w-12 bg-black/70 hover:bg-black/95 text-white flex items-center justify-center transition-all duration-300 rounded-l backdrop-blur-xs ${
+              isPoster
+                ? 'top-3 bottom-6 sm:top-10 sm:bottom-24'
+                : 'top-4 bottom-6 sm:top-16 sm:bottom-56'
+            } ${
               isRailHovered && hoveredIdx === null ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
             aria-label="Scroll Right"
