@@ -109,7 +109,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     <div
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="hero-container relative w-full h-[70vh] min-h-[520px] max-h-[750px] overflow-hidden select-none bg-[#141414]"
+      className="hero-container relative w-full h-[62vh] sm:h-[70vh] min-h-[440px] sm:min-h-[520px] max-h-[750px] overflow-hidden select-none bg-[#141414]"
     >
       {/* Background: High-Resolution Static Backdrop Shot */}
       <div className="absolute inset-0 pointer-events-none">
@@ -135,12 +135,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       {/* 1. Left-to-right reading gradient */}
       <div className="absolute inset-0 bg-gradient-to-r from-[#141414] via-[#141414]/70 to-transparent w-full md:w-3/4 z-10 pointer-events-none" />
       {/* 2. Bottom fade into content rails */}
-      <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-[#141414] via-[#141414]/90 to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-48 sm:h-64 bg-gradient-to-t from-[#141414] via-[#141414]/90 to-transparent z-10 pointer-events-none" />
       {/* 3. Top subtle shadow for navbar readability */}
-      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#141414]/80 to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-x-0 top-0 h-24 sm:h-28 bg-gradient-to-b from-[#141414]/80 to-transparent z-10 pointer-events-none" />
 
       {/* Featured Content Details */}
-      <div className="absolute inset-0 z-20 flex flex-col justify-end px-8 md:px-16 pb-28 sm:pb-32 md:pb-36 max-w-2xl">
+      <div className="absolute inset-0 z-20 flex flex-col justify-end px-4 sm:px-8 md:px-16 pb-20 sm:pb-28 md:pb-36 max-w-2xl">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentItem.id}
@@ -148,13 +148,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.5 }}
-            className="space-y-4"
+            className="space-y-3 sm:space-y-4"
           >
             {/* Badges / Meta */}
-            <div className="space-y-2.5">
+            <div className="space-y-2 sm:space-y-2.5">
               {/* Row 1: Featured, Year, Seasons, Languages, Genre */}
-              <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm font-semibold tracking-wide text-neutral-300">
-                <span className="bg-netflix text-white font-bold px-2.5 py-0.5 rounded text-xs shadow-md">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs md:text-sm font-semibold tracking-wide text-neutral-300">
+                <span className="bg-netflix text-white font-bold px-2 py-0.5 rounded text-[11px] sm:text-xs shadow-md">
                   FEATURED
                 </span>
                 {year && <span>{year}</span>}
@@ -193,41 +193,41 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             </div>
 
             {/* Title */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight drop-shadow-md line-clamp-2">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight drop-shadow-md line-clamp-2">
               {currentItem.title}
             </h1>
 
             {/* Overview */}
             {currentItem.overview && (
-              <p className="text-neutral-200 text-sm sm:text-base leading-relaxed line-clamp-3 drop-shadow text-shadow max-w-xl">
+              <p className="text-neutral-200 text-xs sm:text-sm md:text-base leading-relaxed line-clamp-2 sm:line-clamp-3 drop-shadow text-shadow max-w-xl">
                 {currentItem.overview}
               </p>
             )}
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 pt-1 sm:pt-2">
               <button
                 onClick={() => onPlay(currentItem)}
-                className="flex items-center gap-2 bg-white text-black font-bold px-6 py-2.5 rounded hover:bg-neutral-200 transition-colors shadow-lg active:scale-95"
+                className="flex items-center gap-2 bg-white text-black font-bold px-4 sm:px-6 py-2 sm:py-2.5 rounded hover:bg-neutral-200 transition-colors shadow-lg active:scale-95 text-xs sm:text-sm"
               >
-                <Play className="w-5 h-5 fill-black text-black" />
+                <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-black text-black" />
                 <span className="text-black">Play</span>
               </button>
               <button
                 onClick={() => onMoreInfo(currentItem)}
-                className="flex items-center gap-2 bg-neutral-600/70 hover:bg-neutral-600/90 text-white font-semibold px-6 py-2.5 rounded backdrop-blur-sm transition-colors active:scale-95"
+                className="flex items-center gap-2 bg-neutral-600/70 hover:bg-neutral-600/90 text-white font-semibold px-4 sm:px-6 py-2 sm:py-2.5 rounded backdrop-blur-sm transition-colors active:scale-95 text-xs sm:text-sm"
               >
-                <Info className="w-5 h-5" />
+                <Info className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span>More Info</span>
               </button>
 
               {onPlaySomething && (
                 <button
                   onClick={onPlaySomething}
-                  className="flex items-center gap-2 bg-neutral-800/80 hover:bg-neutral-700 text-neutral-200 hover:text-white font-semibold px-4 py-2.5 rounded backdrop-blur-sm transition-colors border border-white/10 active:scale-95 text-sm"
+                  className="flex items-center gap-2 bg-neutral-800/80 hover:bg-neutral-700 text-neutral-200 hover:text-white font-semibold px-3 sm:px-4 py-2 sm:py-2.5 rounded backdrop-blur-sm transition-colors border border-white/10 active:scale-95 text-xs sm:text-sm"
                   title="Surprise Me (Play Something)"
                 >
-                  <Shuffle className="w-4 h-4 text-netflix" />
+                  <Shuffle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-netflix" />
                   <span className="hidden sm:inline">Surprise Me</span>
                 </button>
               )}
@@ -238,13 +238,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
       {/* Bottom Right Carousel Dots */}
       {items.length > 1 && (
-        <div className="absolute bottom-28 sm:bottom-32 md:bottom-36 right-8 md:right-16 z-30 flex items-center gap-1.5">
+        <div className="absolute bottom-20 sm:bottom-28 md:bottom-36 right-4 sm:right-8 md:right-16 z-30 flex items-center gap-1.5">
           {items.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentIndex(idx)}
               className={`h-1.5 transition-all rounded-full ${
-                idx === currentIndex ? 'w-6 bg-netflix' : 'w-2 bg-white/40 hover:bg-white/70'
+                idx === currentIndex ? 'w-5 sm:w-6 bg-netflix' : 'w-1.5 sm:w-2 bg-white/40 hover:bg-white/70'
               }`}
               aria-label={`Go to slide ${idx + 1}`}
             />
@@ -252,19 +252,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         </div>
       )}
 
-      {/* Prev / Next Slide Controls */}
+      {/* Prev / Next Slide Controls (Desktop / Tablet) */}
       {items.length > 1 && (
         <>
           <button
             onClick={prevSlide}
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-30 p-2 text-white/50 hover:text-white hover:bg-black/40 rounded-full transition-all"
+            className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-30 p-2 text-white/50 hover:text-white hover:bg-black/40 rounded-full transition-all items-center justify-center"
             aria-label="Previous Featured Slide"
           >
             <ChevronLeft className="w-8 h-8" />
           </button>
           <button
             onClick={nextSlide}
-            className="absolute right-3 top-1/2 -translate-y-1/2 z-30 p-2 text-white/50 hover:text-white hover:bg-black/40 rounded-full transition-all"
+            className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-30 p-2 text-white/50 hover:text-white hover:bg-black/40 rounded-full transition-all items-center justify-center"
             aria-label="Next Featured Slide"
           >
             <ChevronRight className="w-8 h-8" />

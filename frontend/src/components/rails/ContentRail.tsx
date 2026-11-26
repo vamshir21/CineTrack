@@ -76,6 +76,7 @@ export const ContentRail: React.FC<ContentRailProps> = ({
   const halfExpansion = Math.round(expansionWidth / 2);
 
   const handleCardMouseEnter = (index: number) => {
+    if (window.innerWidth < 640) return;
     if (!hoverEnabled) return;
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     hoverTimeoutRef.current = setTimeout(() => {
@@ -135,7 +136,7 @@ export const ContentRail: React.FC<ContentRailProps> = ({
       }}
     >
       {/* Rail Title */}
-      <h2 className="text-lg md:text-xl font-bold text-white px-8 md:px-12 mb-3 tracking-wide flex items-center gap-2">
+      <h2 className="text-base sm:text-lg md:text-xl font-bold text-white px-4 sm:px-8 md:px-12 mb-2 sm:mb-3 tracking-wide flex items-center gap-2">
         <span>{title}</span>
         <span className="text-xs text-neutral-400 font-normal">({items.length})</span>
       </h2>
@@ -146,12 +147,12 @@ export const ContentRail: React.FC<ContentRailProps> = ({
         {canScrollLeft && (
           <button
             onClick={() => scroll('left')}
-            className={`absolute left-0 top-8 bottom-16 z-40 w-12 bg-black/70 hover:bg-black/95 text-white flex items-center justify-center transition-all duration-300 rounded-r backdrop-blur-xs ${
+            className={`absolute left-0 top-4 bottom-8 sm:top-8 sm:bottom-16 z-40 w-10 sm:w-12 bg-black/70 hover:bg-black/95 text-white flex items-center justify-center transition-all duration-300 rounded-r backdrop-blur-xs ${
               isRailHovered && hoveredIdx === null ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
             aria-label="Scroll Left"
           >
-            <ChevronLeft className="w-8 h-8" />
+            <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
           </button>
         )}
 
@@ -160,7 +161,7 @@ export const ContentRail: React.FC<ContentRailProps> = ({
           ref={scrollRef}
           onScroll={checkScroll}
           onWheel={handleWheel}
-          className="flex items-center gap-4 overflow-x-auto scrollbar-none px-8 md:px-12 pt-8 pb-16 -mt-4 -mb-10 scroll-smooth no-scrollbar"
+          className="flex items-center gap-2.5 sm:gap-4 overflow-x-auto scrollbar-none px-4 sm:px-8 md:px-12 pt-4 pb-8 sm:pt-8 sm:pb-16 -mt-2 -mb-6 sm:-mt-4 sm:-mb-10 scroll-smooth no-scrollbar"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {items.map((item, idx) => {
@@ -220,12 +221,12 @@ export const ContentRail: React.FC<ContentRailProps> = ({
         {canScrollRight && (
           <button
             onClick={() => scroll('right')}
-            className={`absolute right-0 top-8 bottom-14 z-40 w-12 bg-black/70 hover:bg-black/95 text-white flex items-center justify-center transition-all duration-300 rounded-l backdrop-blur-xs ${
+            className={`absolute right-0 top-4 bottom-8 sm:top-8 sm:bottom-14 z-40 w-10 sm:w-12 bg-black/70 hover:bg-black/95 text-white flex items-center justify-center transition-all duration-300 rounded-l backdrop-blur-xs ${
               isRailHovered && hoveredIdx === null ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
             aria-label="Scroll Right"
           >
-            <ChevronRight className="w-8 h-8" />
+            <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
           </button>
         )}
       </div>

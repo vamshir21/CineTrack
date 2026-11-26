@@ -105,7 +105,7 @@ export function Layout() {
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         onOpenLanModal={() => setIsLanModalOpen(true)}
       />
-      <main className="pb-16 md:pb-0">
+      <main className="pb-20 md:pb-0">
         <ErrorBoundary>
           <Outlet
             context={{
@@ -118,7 +118,7 @@ export function Layout() {
 
       {/* Mobile Bottom Navigation Bar (Phone & Tablet Friendly) */}
       {!isBrowserPlayerOpen && (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#121212]/95 border-t border-neutral-800/80 backdrop-blur-md flex items-center justify-around py-2 px-1 text-[10px] font-semibold text-neutral-400 select-none">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#121212]/95 border-t border-neutral-800/80 backdrop-blur-md flex items-center justify-around py-2 px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-[10px] font-semibold text-neutral-400 select-none">
           <NavLink
             to="/"
             end

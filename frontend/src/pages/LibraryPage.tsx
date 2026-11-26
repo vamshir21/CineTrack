@@ -97,10 +97,10 @@ export const LibraryPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#141414] pt-24 px-8 md:px-12 pb-24 space-y-8">
+    <div className="min-h-screen bg-[#141414] pt-20 sm:pt-24 px-4 sm:px-8 md:px-12 pb-24 space-y-6 sm:space-y-8">
       {/* Page Title */}
       <div>
-        <h1 className="text-3xl font-black text-white tracking-wide">My Library</h1>
+        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-wide">My Library</h1>
         <p className="text-xs text-neutral-400 mt-1">
           High-performance local media storage & streaming center
         </p>
@@ -109,56 +109,56 @@ export const LibraryPage: React.FC = () => {
       {/* Pro Stats Dashboard Bar */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3.5">
-          <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-xl p-3.5 flex items-center space-x-3 shadow-lg">
-            <div className="w-10 h-10 rounded-lg bg-netflix/15 border border-netflix/30 flex items-center justify-center text-netflix">
-              <Film className="w-5 h-5" />
+          <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-xl p-3 sm:p-3.5 flex items-center space-x-2.5 sm:space-x-3 shadow-lg">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-netflix/15 border border-netflix/30 flex items-center justify-center text-netflix shrink-0">
+              <Film className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <p className="text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">Movies</p>
-              <p className="text-xl font-black text-white">{stats.total_movies}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-zinc-400 uppercase truncate">Movies</p>
+              <p className="text-base sm:text-xl font-black text-white truncate">{stats.total_movies}</p>
             </div>
           </div>
 
-          <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-xl p-3.5 flex items-center space-x-3 shadow-lg">
-            <div className="w-10 h-10 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
-              <Tv className="w-5 h-5" />
+          <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-xl p-3 sm:p-3.5 flex items-center space-x-2.5 sm:space-x-3 shadow-lg">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+              <Tv className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <p className="text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">Shows / Eps</p>
-              <p className="text-xl font-black text-white">
-                {stats.total_series} <span className="text-xs font-normal text-zinc-400">({stats.total_episodes} eps)</span>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-zinc-400 uppercase truncate">Shows / Eps</p>
+              <p className="text-base sm:text-xl font-black text-white truncate">
+                {stats.total_series} <span className="text-[10px] sm:text-xs font-normal text-zinc-400">({stats.total_episodes})</span>
               </p>
             </div>
           </div>
 
-          <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-xl p-3.5 flex items-center space-x-3 shadow-lg">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <HardDrive className="w-5 h-5" />
+          <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-xl p-3 sm:p-3.5 flex items-center space-x-2.5 sm:space-x-3 shadow-lg">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+              <HardDrive className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <p className="text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">Storage Used</p>
-              <p className="text-xl font-black text-white">{stats.total_size_formatted}</p>
-            </div>
-          </div>
-
-          <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-xl p-3.5 flex items-center space-x-3 shadow-lg">
-            <div className="w-10 h-10 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">Watch Time</p>
-              <p className="text-xl font-black text-white">{stats.total_watch_formatted}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-zinc-400 uppercase truncate">Storage</p>
+              <p className="text-base sm:text-xl font-black text-white truncate">{stats.total_size_formatted}</p>
             </div>
           </div>
 
-          <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-xl p-3.5 flex items-center space-x-3 shadow-lg col-span-2 sm:col-span-1">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
-              <CheckCircle2 className="w-5 h-5" />
+          <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-xl p-3 sm:p-3.5 flex items-center space-x-2.5 sm:space-x-3 shadow-lg">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <p className="text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">Finished</p>
-              <p className="text-xl font-black text-white">
-                {stats.completed_titles} <span className="text-xs font-normal text-zinc-400">titles</span>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-zinc-400 uppercase truncate">Watch Time</p>
+              <p className="text-base sm:text-xl font-black text-white truncate">{stats.total_watch_formatted}</p>
+            </div>
+          </div>
+
+          <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-xl p-3 sm:p-3.5 flex items-center space-x-2.5 sm:space-x-3 shadow-lg col-span-2 sm:col-span-1">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-[11px] font-semibold tracking-wider text-zinc-400 uppercase truncate">Finished</p>
+              <p className="text-base sm:text-xl font-black text-white truncate">
+                {stats.completed_titles} <span className="text-[10px] sm:text-xs font-normal text-zinc-400">titles</span>
               </p>
             </div>
           </div>
@@ -168,10 +168,10 @@ export const LibraryPage: React.FC = () => {
       {/* Filter & Search Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-2">
         {/* Tab pills */}
-        <div className="flex items-center gap-1 bg-[#222] p-1 rounded-lg border border-neutral-800 w-fit">
+        <div className="flex items-center gap-1 bg-[#222] p-1 rounded-lg border border-neutral-800 w-fit max-w-full overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveTab('all')}
-            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-colors ${
+            className={`px-3 sm:px-4 py-1.5 rounded-md text-xs font-bold transition-colors whitespace-nowrap ${
               activeTab === 'all'
                 ? 'bg-netflix text-white'
                 : 'text-neutral-400 hover:text-white'
@@ -181,7 +181,7 @@ export const LibraryPage: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('movies')}
-            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-colors ${
+            className={`px-3 sm:px-4 py-1.5 rounded-md text-xs font-bold transition-colors whitespace-nowrap ${
               activeTab === 'movies'
                 ? 'bg-netflix text-white'
                 : 'text-neutral-400 hover:text-white'
@@ -191,7 +191,7 @@ export const LibraryPage: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('series')}
-            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-colors ${
+            className={`px-3 sm:px-4 py-1.5 rounded-md text-xs font-bold transition-colors whitespace-nowrap ${
               activeTab === 'series'
                 ? 'bg-netflix text-white'
                 : 'text-neutral-400 hover:text-white'
@@ -202,16 +202,16 @@ export const LibraryPage: React.FC = () => {
         </div>
 
         {/* Search & Sort controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Quick Search */}
-          <div className="relative">
+          <div className="relative flex-1 sm:flex-initial">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search in library..."
-              className="bg-neutral-900 border border-neutral-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-700 w-48 sm:w-60"
+              className="bg-neutral-900 border border-neutral-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-700 w-full sm:w-60"
             />
           </div>
 
@@ -233,7 +233,7 @@ export const LibraryPage: React.FC = () => {
 
       {/* Grid */}
       {filteredAndSortedItems.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
           {filteredAndSortedItems.map((item) => (
             <MediaCard
               key={`${item.id}-${isMovie(item) ? 'movie' : 'series'}`}
@@ -241,6 +241,7 @@ export const LibraryPage: React.FC = () => {
               variant="poster"
               onClick={() => handleItemClick(item)}
               onPlay={() => handlePlayMedia(item)}
+              fluidWidth={true}
             />
           ))}
         </div>

@@ -143,7 +143,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.25 }}
-          className="relative w-full max-w-4xl bg-[#181818] text-white rounded-t-xl md:rounded-xl overflow-hidden shadow-2xl z-10 my-auto flex flex-col min-h-[85vh] max-h-[92vh]"
+          className="relative w-full max-w-4xl bg-[#181818] text-white rounded-t-2xl sm:rounded-xl overflow-hidden shadow-2xl z-10 my-auto flex flex-col min-h-[80vh] sm:min-h-[85vh] max-h-[92vh]"
         >
           {/* Close button */}
           <button
@@ -155,7 +155,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           </button>
 
           {/* Banner Container */}
-          <div className="relative w-full h-[340px] md:h-[420px] shrink-0 bg-neutral-900 overflow-hidden">
+          <div className="relative w-full h-[260px] sm:h-[340px] md:h-[420px] shrink-0 bg-neutral-900 overflow-hidden">
             {showTrailer && trailerKey ? (
               <div className="relative w-full h-full">
                 <TrailerPlayer
@@ -187,16 +187,16 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
             )}
 
             {/* Banner Content & Actions */}
-            <div className="absolute bottom-6 left-6 md:left-10 right-6 z-30 space-y-3 pointer-events-auto">
-              <h1 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-lg">
+            <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-6 md:left-10 right-4 sm:right-6 z-30 space-y-2 sm:space-y-3 pointer-events-auto">
+              <h1 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tight drop-shadow-lg">
                 {movie.title}
               </h1>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 pt-1">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-1">
                 <button
                   onClick={() => onPlay(movie)}
-                  className="flex items-center gap-2 bg-white text-black font-bold px-6 py-2.5 rounded hover:bg-neutral-200 transition-colors shadow-lg active:scale-95 text-sm"
+                  className="flex items-center gap-2 bg-white text-black font-bold px-4 sm:px-6 py-2 sm:py-2.5 rounded hover:bg-neutral-200 transition-colors shadow-lg active:scale-95 text-xs sm:text-sm"
                 >
                   <Play className="w-4 h-4 fill-black" />
                   <span>{hasProgress ? 'Resume Movie' : 'Play Movie'}</span>
@@ -205,7 +205,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
                 {trailerKey && (
                   <button
                     onClick={() => setShowTrailer(!showTrailer)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded border transition-colors text-sm font-semibold shadow-md active:scale-95 ${
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded border transition-colors text-xs sm:text-sm font-semibold shadow-md active:scale-95 ${
                       showTrailer
                         ? 'bg-netflix text-white border-netflix'
                         : 'bg-neutral-800/80 hover:bg-neutral-700 text-white border-white/20'
@@ -219,7 +219,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
                 <button
                   onClick={() => toggleWatchlist.mutate()}
-                  className="flex items-center gap-2 bg-neutral-800/80 hover:bg-neutral-700 text-white font-medium px-4 py-2.5 rounded border border-white/20 transition-colors text-sm"
+                  className="flex items-center gap-1.5 sm:gap-2 bg-neutral-800/80 hover:bg-neutral-700 text-white font-medium px-3 sm:px-4 py-2 sm:py-2.5 rounded border border-white/20 transition-colors text-xs sm:text-sm"
                 >
                   {watchlistStatus?.in_watchlist ? (
                     <>
@@ -236,7 +236,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
 
                 <button
                   onClick={() => toggleWatched.mutate()}
-                  className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded border transition-colors text-sm font-medium ${
+                  className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-2 sm:py-2.5 rounded border transition-colors text-xs sm:text-sm font-medium ${
                     isWatched
                       ? 'bg-green-600/30 border-green-500/50 text-green-400 hover:bg-green-600/40'
                       : 'bg-neutral-800/80 border-white/20 text-neutral-300 hover:text-white hover:bg-neutral-700'
@@ -273,7 +273,7 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
           </div>
 
           {/* Body / Scrollable Content */}
-          <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-8">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8">
             {/* Meta badges & synopsis */}
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-300">

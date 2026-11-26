@@ -92,10 +92,10 @@ export const WatchlistPage: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[#141414] pt-24 px-8 md:px-16 pb-24 text-white">
+      <div className="min-h-screen bg-[#141414] pt-20 sm:pt-24 px-4 sm:px-8 md:px-16 pb-24 text-white">
         {/* Top Back Navigation Bar */}
-        <div className="flex items-center justify-between mb-8 pb-4 border-b border-neutral-800">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between mb-6 sm:mb-8 pb-4 border-b border-neutral-800">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => navigate(-1)}
               className="flex items-center gap-2 p-2 hover:bg-neutral-800/80 rounded-full transition-colors text-neutral-300 hover:text-white"
@@ -105,7 +105,7 @@ export const WatchlistPage: React.FC = () => {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-2xl md:text-3xl font-black tracking-wide">My Watchlist</h1>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-wide">My Watchlist</h1>
               <p className="text-xs text-neutral-400 mt-0.5">
                 {items.length} {items.length === 1 ? 'title' : 'titles'} saved for later
               </p>
@@ -122,7 +122,7 @@ export const WatchlistPage: React.FC = () => {
 
         {/* Content Grid or Rich Empty State */}
         {items.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-6 gap-y-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
             {items.map((item) => (
               <MediaCard
                 key={`${item.id}-${isMovie(item) ? 'movie' : 'series'}`}
@@ -130,6 +130,7 @@ export const WatchlistPage: React.FC = () => {
                 variant="poster"
                 onClick={() => handleItemClick(item)}
                 onPlay={() => handlePlayMedia(item)}
+                fluidWidth={true}
               />
             ))}
           </div>

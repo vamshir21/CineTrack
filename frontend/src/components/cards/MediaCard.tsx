@@ -56,9 +56,18 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 
   const [localHovered, setLocalHovered] = useState(false);
   const [localOrigin, setLocalOrigin] = useState<'left' | 'center' | 'right'>('center');
+  const [isMobileScreen, setIsMobileScreen] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false
+  );
 
-  // Determine active hover state
-  const isExpanded = isControlledHover ? !!controlledIsHovered : localHovered;
+  useEffect(() => {
+    const handleResize = () => setIsMobileScreen(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Determine active hover state (disabled on mobile screens for smooth tap UX)
+  const isExpanded = isMobileScreen ? false : (isControlledHover ? !!controlledIsHovered : localHovered);
 
   const isEpisode = (item as any).media_type === 'episode' || !!(item as any).series_title;
   const isCurrentMovie = !isEpisode && isMovie(item);
@@ -134,6 +143,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   const hoverDelay = Number(settings?.hover_delay_ms) || 500;
 
   const handleMouseEnter = () => {
+    if (isMobileScreen) return;
     if (isControlledHover) {
       onHoverStart?.();
     } else {
@@ -168,10 +178,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   const baseWidth = isPoster
     ? (cardSize === 'small' ? 170 : cardSize === 'large' ? 230 : 200)
     : (cardSize === 'small' ? 250 : cardSize === 'large' ? 335 : 295);
+  const responsiveBaseWidth = isMobileScreen
+    ? (isPoster ? 135 : 210)
+    : baseWidth;
   const expandedWidth = isPoster
     ? (cardSize === 'small' ? 275 : cardSize === 'large' ? 355 : 315)
     : (cardSize === 'small' ? 335 : cardSize === 'large' ? 435 : 385);
-  const centerOffset = Math.round((baseWidth - expandedWidth) / 2);
+  const centerOffset = Math.round((responsiveBaseWidth - expandedWidth) / 2);
 
   // Resolve expansion position
   const activeOrigin = isControlledHover
@@ -185,7 +198,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
       transition={{ duration: 0.32, ease: [0.25, 0.46, 0.45, 0.94] }}
       className={`relative ${fluidWidth ? 'w-full min-w-0' : 'flex-shrink-0'} select-none ${isExpanded ? 'z-50' : 'z-10'}`}
       style={{
-        width: fluidWidth ? '100%' : `${baseWidth}px`,
+        width: fluidWidth ? '100%' : `${responsiveBaseWidth}px`,
         aspectRatio: isPoster ? '2/3' : '16/9',
       }}
       onMouseEnter={handleMouseEnter}

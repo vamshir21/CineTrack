@@ -81,21 +81,21 @@ export const MoviesPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#141414] pt-24 px-8 md:px-12 pb-24">
+    <div className="min-h-screen bg-[#141414] pt-20 sm:pt-24 px-4 sm:px-8 md:px-12 pb-24">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-wide">Movies</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-wide">Movies</h1>
           <p className="text-xs text-neutral-400 mt-1">{filteredMovies.length} movies in local library</p>
         </div>
 
         {/* Filter Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Genre select */}
           <select
             value={selectedGenre}
             onChange={(e) => setSelectedGenre(e.target.value)}
-            className="bg-[#2a2a2a] text-white border border-neutral-700 rounded px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-netflix cursor-pointer"
+            className="bg-[#2a2a2a] text-white border border-neutral-700 rounded px-2.5 sm:px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-netflix cursor-pointer"
           >
             <option value="all">All Genres</option>
             {allGenres.map((g) => (
@@ -108,7 +108,7 @@ export const MoviesPage: React.FC = () => {
             <select
               value={selectedLanguage}
               onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="bg-[#2a2a2a] text-white border border-neutral-700 rounded px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-netflix cursor-pointer"
+              className="bg-[#2a2a2a] text-white border border-neutral-700 rounded px-2.5 sm:px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-netflix cursor-pointer"
             >
               <option value="all">All Languages</option>
               {allLanguages.map((l) => (
@@ -121,7 +121,7 @@ export const MoviesPage: React.FC = () => {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-[#2a2a2a] text-white border border-neutral-700 rounded px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-netflix cursor-pointer"
+            className="bg-[#2a2a2a] text-white border border-neutral-700 rounded px-2.5 sm:px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-netflix cursor-pointer"
           >
             <option value="recent">Recently Added</option>
             <option value="rating">Top Rated</option>
@@ -132,7 +132,7 @@ export const MoviesPage: React.FC = () => {
 
       {/* Franchises & Collections Binge Rail */}
       {collections && collections.length > 0 && selectedGenre === 'all' && (
-        <div className="-mx-8 md:-mx-12 mb-8">
+        <div className="-mx-4 sm:-mx-8 md:-mx-12 mb-8">
           <CollectionRail
             title="Franchises & Movie Sagas"
             subtitle="Browse and binge complete movie sagas in order"
@@ -144,7 +144,7 @@ export const MoviesPage: React.FC = () => {
 
       {/* Grid of Movie Cards */}
       {filteredMovies.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
           {filteredMovies.map((movie) => (
             <MediaCard
               key={movie.id}
@@ -152,6 +152,7 @@ export const MoviesPage: React.FC = () => {
               variant="poster"
               onClick={() => setSelectedMovie(movie)}
               onPlay={() => handlePlay(movie)}
+              fluidWidth={true}
             />
           ))}
         </div>

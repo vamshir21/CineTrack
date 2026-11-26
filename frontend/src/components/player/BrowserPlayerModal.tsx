@@ -943,7 +943,7 @@ export const BrowserPlayerModal: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-0 left-0 right-0 p-3 sm:p-5 md:p-6 bg-gradient-to-b from-black/95 via-black/50 to-transparent flex items-center justify-between z-30 pointer-events-auto"
+            className="absolute top-0 left-0 right-0 p-3 sm:p-5 md:p-6 pt-[max(0.75rem,env(safe-area-inset-top))] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] bg-gradient-to-b from-black/95 via-black/50 to-transparent flex items-center justify-between z-30 pointer-events-auto"
           >
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 pr-2">
               <button
@@ -1228,12 +1228,12 @@ export const BrowserPlayerModal: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 md:p-6 bg-gradient-to-t from-black/95 via-black/60 to-transparent flex flex-col gap-2 z-30 pointer-events-auto"
+            className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 md:p-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] bg-gradient-to-t from-black/95 via-black/60 to-transparent flex flex-col gap-2 z-30 pointer-events-auto"
           >
             {/* FULL-WIDTH DRAGGABLE SCRUB BAR WITH NETFLIX PREVIEW BOX */}
             <div
               ref={scrubBarRef}
-              className="relative w-full h-8 flex items-center cursor-pointer group py-2"
+              className="relative w-full h-9 sm:h-9 flex items-center cursor-pointer group py-2.5 touch-none"
               onMouseMove={(e) => {
                 if (!isScrubbing) {
                   const pos = calcScrubPosition(e.clientX);
@@ -1335,7 +1335,7 @@ export const BrowserPlayerModal: React.FC = () => {
                     e.stopPropagation();
                     handleSeekDelta(-10);
                   }}
-                  className="p-1.5 sm:p-2 hover:bg-neutral-800 rounded-full text-neutral-300 hover:text-white transition-colors"
+                  className="hidden sm:inline-flex p-1.5 sm:p-2 hover:bg-neutral-800 rounded-full text-neutral-300 hover:text-white transition-colors"
                   title="Rewind 10s (Left Arrow)"
                 >
                   <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1346,7 +1346,7 @@ export const BrowserPlayerModal: React.FC = () => {
                     e.stopPropagation();
                     handleSeekDelta(10);
                   }}
-                  className="p-1.5 sm:p-2 hover:bg-neutral-800 rounded-full text-neutral-300 hover:text-white transition-colors"
+                  className="hidden sm:inline-flex p-1.5 sm:p-2 hover:bg-neutral-800 rounded-full text-neutral-300 hover:text-white transition-colors"
                   title="Forward 10s (Right Arrow)"
                 >
                   <RotateCw className="w-4 h-4 sm:w-5 sm:h-5" />

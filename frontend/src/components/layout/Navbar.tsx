@@ -83,15 +83,15 @@ export function Navbar({ onOpenPlaySomething, onOpenShortcuts, onOpenLanModal }:
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 h-[68px] flex items-center px-6 md:px-12 transition-all duration-500 ${
+      className={`fixed top-0 left-0 right-0 z-50 h-[56px] sm:h-[68px] flex items-center px-4 sm:px-6 md:px-12 transition-all duration-500 ${
         scrolled ? 'bg-[#141414]' : 'bg-gradient-to-b from-black/80 to-transparent'
       }`}
     >
       {/* Logo */}
-      <NavLink to="/" className="mr-6 md:mr-8 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <Film className="text-netflix w-6 h-6" />
-          <span className="text-netflix font-black text-xl tracking-widest">CINETRACK</span>
+      <NavLink to="/" className="mr-3 sm:mr-6 md:mr-8 flex-shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <Film className="text-netflix w-5 h-5 sm:w-6 sm:h-6" />
+          <span className="text-netflix font-black text-lg sm:text-xl tracking-widest">CINETRACK</span>
         </div>
       </NavLink>
 
@@ -149,14 +149,14 @@ export function Navbar({ onOpenPlaySomething, onOpenShortcuts, onOpenLanModal }:
         {searchOpen ? (
           <form onSubmit={handleSearch} className="flex items-center">
             <div className="flex items-center bg-black/80 border border-white/50 rounded">
-              <Search className="ml-2 text-white w-4 h-4" />
+              <Search className="ml-2 text-white w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <input
                 autoFocus
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Titles, people, genres"
-                className="bg-transparent text-white placeholder-white/50 text-sm px-3 py-1.5 outline-none w-44 sm:w-56"
+                placeholder="Search..."
+                className="bg-transparent text-white placeholder-white/50 text-xs sm:text-sm px-2.5 sm:px-3 py-1 sm:py-1.5 outline-none w-28 sm:w-56"
                 onBlur={() => {
                   if (!searchQuery) setSearchOpen(false);
                 }}

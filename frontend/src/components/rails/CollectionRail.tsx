@@ -46,10 +46,10 @@ export const CollectionRail: React.FC<CollectionRailProps> = ({
   if (!collections || collections.length === 0) return null;
 
   return (
-    <div className="relative group px-8 md:px-12 my-6">
+    <div className="relative group px-4 sm:px-8 md:px-12 my-6">
       {/* Title & Subtitle */}
       <div className="flex items-baseline gap-3 mb-3">
-        <h2 className="text-xl md:text-2xl font-bold text-white tracking-wide">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white tracking-wide">
           {title}
         </h2>
         {subtitle && (
@@ -91,7 +91,7 @@ export const CollectionRail: React.FC<CollectionRailProps> = ({
           <div
             key={c.collection_id}
             onClick={() => onSelectCollection(c.collection_id)}
-            className="flex-shrink-0 w-72 sm:w-80 cursor-pointer group/card rounded-xl overflow-hidden bg-[#1c1c1c] border border-neutral-800 hover:border-neutral-600 transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl hover:shadow-black/60 relative"
+            className="flex-shrink-0 w-60 sm:w-80 cursor-pointer group/card rounded-xl overflow-hidden bg-[#1c1c1c] border border-neutral-800 hover:border-neutral-600 transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl hover:shadow-black/60 relative"
           >
             {/* Backdrop / Poster Container */}
             <div className="relative aspect-[16/9] w-full overflow-hidden bg-neutral-900">

@@ -68,7 +68,7 @@ export const SearchPage: React.FC = () => {
   const totalCount = movies.length + series.length + episodes.length;
 
   return (
-    <div className="min-h-screen bg-[#141414] pt-24 px-8 md:px-12 pb-24">
+    <div className="min-h-screen bg-[#141414] pt-20 sm:pt-24 px-4 sm:px-8 md:px-12 pb-24">
       {/* Search Bar */}
       <div className="max-w-2xl mb-10">
         <div className="relative flex items-center">
@@ -95,9 +95,9 @@ export const SearchPage: React.FC = () => {
 
       {/* Movies Section */}
       {movies.length > 0 && (
-        <div className="mb-10">
-          <h3 className="text-base font-semibold text-neutral-400 mb-3">Movies ({movies.length})</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+        <div className="mb-8 sm:mb-10">
+          <h3 className="text-sm sm:text-base font-semibold text-neutral-400 mb-3">Movies ({movies.length})</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
             {movies.map((movie) => (
               <MediaCard
                 key={movie.id}
@@ -105,6 +105,7 @@ export const SearchPage: React.FC = () => {
                 variant="poster"
                 onClick={() => handleItemClick(movie)}
                 onPlay={() => handlePlayMedia(movie)}
+                fluidWidth={true}
               />
             ))}
           </div>
@@ -113,9 +114,9 @@ export const SearchPage: React.FC = () => {
 
       {/* TV Series Section */}
       {series.length > 0 && (
-        <div className="mb-10">
-          <h3 className="text-base font-semibold text-neutral-400 mb-3">TV Shows ({series.length})</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+        <div className="mb-8 sm:mb-10">
+          <h3 className="text-sm sm:text-base font-semibold text-neutral-400 mb-3">TV Shows ({series.length})</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
             {series.map((show) => (
               <MediaCard
                 key={show.id}
@@ -123,6 +124,7 @@ export const SearchPage: React.FC = () => {
                 variant="poster"
                 onClick={() => handleItemClick(show)}
                 onPlay={() => handlePlayMedia(show)}
+                fluidWidth={true}
               />
             ))}
           </div>
