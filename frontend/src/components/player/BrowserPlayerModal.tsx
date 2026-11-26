@@ -5,6 +5,7 @@ import {
   Pause,
   RotateCcw,
   RotateCw,
+  SkipForward,
   Volume2,
   VolumeX,
   Volume1,
@@ -20,11 +21,13 @@ import {
   Check,
   X,
 } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBrowserPlayerStore } from '../../store/browserPlayerStore';
 import { streamApi, type TrackItem } from '../../api/stream';
 import { libraryApi } from '../../api/library';
+import { settingsApi } from '../../api/settings';
 import { formatTime } from '../../utils/timeUtils';
+import { getImageUrl } from '../../utils/imageUtils';
 import { isLanClient } from '../../hooks/usePlayMedia';
 import type { Episode } from '../../types';
 
@@ -92,6 +95,17 @@ export const BrowserPlayerModal: React.FC = () => {
   const [nextEpisode, setNextEpisode] = useState<Episode | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCountdownCancelled, setIsCountdownCancelled] = useState(false);
+
+  // Load settings for auto next episode countdown and end-credits threshold
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: settingsApi.getSettings,
+  });
+
+  const autoNextEnabled = settings?.auto_next_episode !== 'false';
+  const initialCountdown = Math.max(5, Number(settings?.next_episode_countdown || 15));
+  const thresholdMinutes = Number(settings?.completion_threshold_minutes) || 2;
+  const thresholdSeconds = Math.max(30, thresholdMinutes * 60);
 
   // Auto-dismiss in-browser modal on local Ubuntu desktop (where native VLC is preferred)
   useEffect(() => {
@@ -241,6 +255,15 @@ export const BrowserPlayerModal: React.FC = () => {
     },
     [activeMedia, duration]
   );
+
+  // Play next episode
+  const handlePlayNextEpisode = useCallback(() => {
+    if (!nextEpisode) return;
+    syncProgress(true);
+    openEpisode(nextEpisode);
+    setCountdown(null);
+    setIsCountdownCancelled(false);
+  }, [nextEpisode, syncProgress, openEpisode]);
 
   // Periodic progress sync
   useEffect(() => {
@@ -566,6 +589,11 @@ export const BrowserPlayerModal: React.FC = () => {
       } else if (e.key === 's' || e.key === 'S') {
         e.preventDefault();
         setIsAudioSubtitlesOpen((prev) => !prev);
+      } else if (e.key === 'n' || e.key === 'N') {
+        if (nextEpisode) {
+          e.preventDefault();
+          handlePlayNextEpisode();
+        }
       } else if (e.key === 'Escape') {
         e.preventDefault();
         if (isAudioSubtitlesOpen) {
@@ -605,6 +633,7 @@ export const BrowserPlayerModal: React.FC = () => {
   const handleTimeUpdate = () => {
     if (!videoRef.current || isScrubbing) return;
     const cur = videoRef.current.currentTime;
+    const dur = videoRef.current.duration || duration || 0;
     setCurrentTime(cur);
 
     if (videoRef.current.buffered.length > 0) {
@@ -618,6 +647,26 @@ export const BrowserPlayerModal: React.FC = () => {
         }
       }
     }
+
+    // ── Check End Credits / Next Episode Countdown Trigger from Settings ──
+    if (
+      autoNextEnabled &&
+      nextEpisode &&
+      !isCountdownCancelled &&
+      dur >= 60 &&
+      cur >= 30
+    ) {
+      const remaining = dur - cur;
+      const progressPct = dur > 0 ? (cur / dur) * 100 : 0;
+      const isAtEndCredits = remaining > 0 && remaining <= thresholdSeconds && progressPct >= 85;
+
+      if (isAtEndCredits && countdown === null) {
+        setCountdown(initialCountdown);
+      } else if (!isAtEndCredits && countdown !== null && remaining > thresholdSeconds + 5) {
+        // User sought backwards away from end-credits
+        setCountdown(null);
+      }
+    }
   };
 
   // Auto next episode countdown
@@ -625,20 +674,17 @@ export const BrowserPlayerModal: React.FC = () => {
     if (countdown === null) return;
     if (countdown <= 0) {
       if (nextEpisode) {
-        syncProgress(true);
-        openEpisode(nextEpisode);
-        setCountdown(null);
-        setIsCountdownCancelled(false);
+        handlePlayNextEpisode();
       }
       return;
     }
 
     const timer = setTimeout(() => {
-      setCountdown((prev) => (prev !== null ? prev - 1 : null));
+      setCountdown((prev) => (prev !== null && prev > 0 ? prev - 1 : 0));
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [countdown, nextEpisode, openEpisode, syncProgress]);
+  }, [countdown, nextEpisode, handlePlayNextEpisode]);
 
   // Speed Cycle
   const handleSpeedCycle = (e?: React.MouseEvent) => {
@@ -777,8 +823,10 @@ export const BrowserPlayerModal: React.FC = () => {
         onEnded={() => {
           setIsPlaying(false);
           syncProgress(true);
-          if (nextEpisode && !isCountdownCancelled) {
-            setCountdown(5);
+          if (autoNextEnabled && nextEpisode && !isCountdownCancelled) {
+            if (countdown === null) {
+              setCountdown(initialCountdown);
+            }
           }
         }}
         className={`w-full h-full ${objectFitClass} transition-all duration-150`}
@@ -1060,6 +1108,21 @@ export const BrowserPlayerModal: React.FC = () => {
                 <RotateCw className="w-6 h-6 sm:w-7 sm:h-7" />
                 <span className="text-[9px] font-black tracking-tighter mt-0.5">10</span>
               </button>
+
+              {/* Next Episode button (TV series only) */}
+              {activeMedia.mediaType === 'episode' && nextEpisode && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePlayNextEpisode();
+                  }}
+                  className="p-3.5 sm:p-4 rounded-full bg-black/75 hover:bg-neutral-800 text-white border border-white/20 active:scale-90 transition-all flex flex-col items-center justify-center shadow-2xl backdrop-blur-sm"
+                  title={`Next Episode: S${nextEpisode.season_number} E${nextEpisode.episode_number}: ${nextEpisode.title || 'Next Episode'} (N)`}
+                >
+                  <SkipForward className="w-6 h-6 sm:w-7 sm:h-7 fill-white" />
+                  <span className="text-[9px] font-black tracking-tighter mt-0.5 uppercase">Next</span>
+                </button>
+              )}
             </motion.div>
           </div>
         )}
@@ -1185,33 +1248,98 @@ export const BrowserPlayerModal: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Next Episode Floating Card */}
+      {/* ── NETFLIX CIRCULAR NEXT EPISODE COUNTDOWN CARD ─────────────────────── */}
       <AnimatePresence>
         {countdown !== null && nextEpisode && !isLocked && (
           <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
-            className="absolute bottom-24 right-3 sm:right-6 z-40 bg-neutral-900/95 border border-neutral-700/80 rounded-xl p-4 shadow-2xl backdrop-blur-md max-w-sm w-full text-white pointer-events-auto"
+            transition={{ duration: 0.25 }}
+            className="absolute bottom-24 right-3 sm:right-6 z-50 bg-[#181818]/95 backdrop-blur-xl border border-neutral-700/90 rounded-2xl shadow-2xl p-4 sm:p-5 max-w-sm sm:max-w-md w-full select-none pointer-events-auto"
           >
-            <div className="text-[10px] font-bold uppercase tracking-wider text-red-500 mb-1">
-              Up Next in {countdown}s
+            <div className="flex items-start justify-between gap-3">
+              {/* Circular Countdown Ring */}
+              <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shrink-0">
+                <svg className="w-14 h-14 sm:w-16 sm:h-16 -rotate-90 transform" viewBox="0 0 64 64">
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r={26}
+                    stroke="#2c2c2c"
+                    strokeWidth="4"
+                    fill="transparent"
+                  />
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r={26}
+                    stroke="#E50914"
+                    strokeWidth="4"
+                    strokeDasharray={2 * Math.PI * 26}
+                    strokeDashoffset={
+                      (2 * Math.PI * 26) *
+                      (1 - Math.max(0, Math.min(1, (countdown ?? initialCountdown) / initialCountdown)))
+                    }
+                    strokeLinecap="round"
+                    fill="transparent"
+                    className="transition-all duration-1000 ease-linear"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
+                  <span className="text-base sm:text-lg font-black text-white font-mono leading-none">
+                    {countdown}
+                  </span>
+                  <span className="text-[7px] sm:text-[8px] font-bold text-neutral-400 uppercase tracking-wider">
+                    SEC
+                  </span>
+                </div>
+              </div>
+
+              {/* Episode Meta */}
+              <div className="flex-1 min-w-0 pr-1">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-netflix text-white shadow-sm">
+                    UP NEXT
+                  </span>
+                  <span className="text-xs font-semibold text-neutral-300">
+                    Skipping in {countdown}s
+                  </span>
+                </div>
+                <p className="text-white text-xs sm:text-sm font-bold truncate">
+                  {(nextEpisode as any).series_title || activeMedia.title.split(':')[0] || 'Next Episode'}
+                </p>
+                <p className="text-[11px] sm:text-xs text-neutral-300 truncate">
+                  S{nextEpisode.season_number} E{nextEpisode.episode_number}: {nextEpisode.title || `Episode ${nextEpisode.episode_number}`}
+                </p>
+              </div>
+
+              {/* Next Episode Thumbnail */}
+              {(nextEpisode.still_path || (nextEpisode as any).backdrop_path) && (
+                <div className="w-16 h-10 sm:w-20 sm:h-12 rounded-lg overflow-hidden bg-neutral-800 shrink-0 border border-neutral-700/60 relative">
+                  <img
+                    src={getImageUrl(nextEpisode.still_path || (nextEpisode as any).backdrop_path) || ''}
+                    alt={nextEpisode.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/25 flex items-center justify-center">
+                    <Play className="w-3.5 h-3.5 fill-white text-white drop-shadow" />
+                  </div>
+                </div>
+              )}
             </div>
-            <h4 className="font-bold text-sm line-clamp-1 mb-1">
-              S{nextEpisode.season_number} E{nextEpisode.episode_number}: {nextEpisode.title || 'Next Episode'}
-            </h4>
-            <div className="flex items-center gap-2 mt-3">
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 mt-3.5 pt-3 border-t border-neutral-800">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  syncProgress(true);
-                  openEpisode(nextEpisode);
-                  setCountdown(null);
+                  handlePlayNextEpisode();
                 }}
-                className="flex-1 py-1.5 rounded-lg bg-white hover:bg-neutral-200 text-black font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow"
+                className="flex-1 flex items-center justify-center gap-2 bg-white text-black hover:bg-neutral-200 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-md active:scale-95"
               >
                 <Play className="w-3.5 h-3.5 fill-black" />
-                Play Now
+                <span>Play Now</span>
               </button>
               <button
                 onClick={(e) => {
@@ -1219,9 +1347,11 @@ export const BrowserPlayerModal: React.FC = () => {
                   setCountdown(null);
                   setIsCountdownCancelled(true);
                 }}
-                className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-semibold transition-colors"
+                className="flex items-center justify-center gap-1.5 bg-[#262626] hover:bg-[#333] text-neutral-300 hover:text-white px-3.5 py-2 rounded-lg text-xs font-semibold transition-all border border-neutral-700 active:scale-95"
+                title="Cancel countdown and watch credits"
               >
-                Dismiss
+                <X className="w-3.5 h-3.5" />
+                <span>Watch Credits</span>
               </button>
             </div>
           </motion.div>
@@ -1359,6 +1489,24 @@ export const BrowserPlayerModal: React.FC = () => {
                 >
                   <RotateCw className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
+
+                {/* Next Episode Button */}
+                {activeMedia.mediaType === 'episode' && nextEpisode && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePlayNextEpisode();
+                    }}
+                    className="p-1.5 sm:px-2.5 sm:py-1.5 hover:bg-neutral-800 rounded-full sm:rounded-lg text-white hover:text-netflix transition-all flex items-center gap-1 active:scale-95 group/next"
+                    title={`Play Next Episode: S${nextEpisode.season_number} E${nextEpisode.episode_number}: ${nextEpisode.title || 'Next Episode'} (N)`}
+                    aria-label="Play Next Episode"
+                  >
+                    <SkipForward className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
+                    <span className="hidden xl:inline text-xs font-bold text-neutral-200 group-hover/next:text-white">
+                      Next Ep
+                    </span>
+                  </button>
+                )}
 
                 {/* Volume Slider (Desktop) */}
                 <div className="hidden md:flex items-center gap-2 group/volume ml-1">

@@ -56,6 +56,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 
   const [localHovered, setLocalHovered] = useState(false);
   const [localOrigin, setLocalOrigin] = useState<'left' | 'center' | 'right'>('center');
+  const [renderedCardWidth, setRenderedCardWidth] = useState<number>(200);
   const [isMobileScreen, setIsMobileScreen] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 640 : false
   );
@@ -65,6 +66,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const updateCardWidth = () => {
+    if (cardRef.current) {
+      const w = cardRef.current.offsetWidth;
+      if (w > 50) setRenderedCardWidth(w);
+    }
+  };
 
   // Determine active hover state (disabled on mobile screens for smooth tap UX)
   const isExpanded = isMobileScreen ? false : (isControlledHover ? !!controlledIsHovered : localHovered);
@@ -144,6 +152,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
 
   const handleMouseEnter = () => {
     if (isMobileScreen) return;
+    updateCardWidth();
     if (isControlledHover) {
       onHoverStart?.();
     } else {
@@ -151,8 +160,12 @@ export const MediaCard: React.FC<MediaCardProps> = ({
       localTimeoutRef.current = setTimeout(() => {
         if (cardRef.current) {
           const rect = cardRef.current.getBoundingClientRect();
-          if (rect.left < 140) setLocalOrigin('left');
-          else if (window.innerWidth - rect.right < 140) setLocalOrigin('right');
+          if (rect.width > 50) setRenderedCardWidth(rect.width);
+          const effectiveW = rect.width > 50 ? rect.width : responsiveBaseWidth;
+          const dynamicHoverW = Math.max(isPoster ? 380 : 420, Math.round(effectiveW * 1.35));
+          const halfExtra = (dynamicHoverW - effectiveW) / 2;
+          if (rect.left < halfExtra + 24) setLocalOrigin('left');
+          else if (window.innerWidth - rect.right < halfExtra + 24) setLocalOrigin('right');
           else setLocalOrigin('center');
         }
         setLocalHovered(true);
@@ -181,10 +194,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({
   const responsiveBaseWidth = isMobileScreen
     ? (isPoster ? 135 : 210)
     : baseWidth;
+
+  // Dynamic expansion width: scale by ~1.35x of actual rendered card width so hover card never shrinks
+  const effectiveBaseWidth = cardRef.current?.offsetWidth || renderedCardWidth || responsiveBaseWidth;
   const expandedWidth = isPoster
-    ? (cardSize === 'small' ? 275 : cardSize === 'large' ? 355 : 315)
-    : (cardSize === 'small' ? 335 : cardSize === 'large' ? 435 : 385);
-  const centerOffset = Math.round((responsiveBaseWidth - expandedWidth) / 2);
+    ? Math.max(380, Math.round(effectiveBaseWidth * 1.35))
+    : Math.max(420, Math.round(effectiveBaseWidth * 1.3));
+  const centerOffset = Math.round((effectiveBaseWidth - expandedWidth) / 2);
 
   // Resolve expansion position
   const activeOrigin = isControlledHover
@@ -208,7 +224,7 @@ export const MediaCard: React.FC<MediaCardProps> = ({
       <div
         onClick={onClick}
         className={`w-full h-full rounded-md overflow-hidden bg-[#1f1f1f] cursor-pointer transition-all duration-200 relative group/card ${
-          isExpanded ? 'opacity-0' : 'opacity-100'
+          isExpanded ? 'opacity-30' : 'opacity-100'
         }`}
       >
         <ImageWithFallback
@@ -276,13 +292,13 @@ export const MediaCard: React.FC<MediaCardProps> = ({
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.92 }}
+            initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.92 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="absolute z-50 rounded-md overflow-hidden bg-[#181818] shadow-[0_16px_36px_rgba(0,0,0,0.98)] border border-neutral-700/60 cursor-pointer"
+            exit={{ opacity: 0, scale: 0.94 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="absolute z-50 rounded-lg overflow-hidden bg-[#181818] shadow-[0_24px_50px_rgba(0,0,0,0.98)] border border-neutral-700/80 cursor-pointer"
             style={{
-              top: '-32px',
+              top: isPoster ? '-26px' : '-22px',
               width: `${expandedWidth}px`,
               ...(activeOrigin === 'left' && { left: '0px' }),
               ...(activeOrigin === 'right' && { right: '0px' }),
