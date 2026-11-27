@@ -7,6 +7,7 @@ export const playbackApi = {
     position?: number;
     media_type: string;
     media_id: number;
+    profile_id?: number;
   }): Promise<void> => {
     await client.post('/api/playback/play', params);
   },

@@ -148,6 +148,7 @@ class PlayRequest(BaseModel):
     position: float = 0.0
     media_type: str
     media_id: int
+    profile_id: Optional[int] = None
 
 
 class SeekRequest(BaseModel):

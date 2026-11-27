@@ -1,5 +1,6 @@
 import { useBrowserPlayerStore } from '../store/browserPlayerStore';
 import { usePlaybackStore } from '../store/playbackStore';
+import { useProfileStore } from '../store/profileStore';
 import { playbackApi } from '../api/playback';
 import { isMovie, type MediaItem, type Movie, type Episode, type TVSeries } from '../types';
 
@@ -23,6 +24,7 @@ export const isLanClient = (): boolean => {
 export function usePlayMedia() {
   const { openMovie, openEpisode } = useBrowserPlayerStore();
   const { setPlayerOpen } = usePlaybackStore();
+  const { activeProfile } = useProfileStore();
 
   const playMovie = async (movie: Movie, forceVlc = false, forceWeb = false) => {
     const isLan = isLanClient();
@@ -38,6 +40,7 @@ export function usePlayMedia() {
         position: movie.progress?.position || 0,
         media_type: 'movie',
         media_id: movie.id,
+        profile_id: activeProfile?.id,
       });
     }
   };
@@ -61,6 +64,7 @@ export function usePlayMedia() {
         position: episode.progress?.position || 0,
         media_type: 'episode',
         media_id: episode.id,
+        profile_id: activeProfile?.id,
       });
     }
   };

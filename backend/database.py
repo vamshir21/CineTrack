@@ -4,7 +4,7 @@ from backend.config import DATABASE_URL
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    connect_args={"check_same_thread": False, "timeout": 15},
     echo=False,
 )
 
@@ -28,9 +28,12 @@ def init_db():
     from backend import models  # noqa: F401
     Base.metadata.create_all(bind=engine)
 
-    # Ensure migrations and default admin profile exist
+    # Ensure WAL mode, busy timeout, migrations, and default admin profile exist
     try:
         with engine.connect() as conn:
+            conn.execute(text("PRAGMA journal_mode=WAL"))
+            conn.execute(text("PRAGMA busy_timeout=10000"))
+
             # 1. Collection columns on movies
             cols = [r[1] for r in conn.execute(text("PRAGMA table_info(movies)")).fetchall()]
             if "collection_id" not in cols:

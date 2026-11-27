@@ -5,6 +5,7 @@ import { playbackApi } from '../../api/playback';
 import { libraryApi } from '../../api/library';
 import { settingsApi } from '../../api/settings';
 import { usePlaybackStore } from '../../store/playbackStore';
+import { useProfileStore } from '../../store/profileStore';
 import { formatTime } from '../../utils/timeUtils';
 import { getImageUrl } from '../../utils/imageUtils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -16,6 +17,17 @@ export const PlayerOverlay: React.FC = () => {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [dismissedForEpisode, setDismissedForEpisode] = useState<number | null>(null);
   const lastActiveEpisodeIdRef = useRef<number | null>(null);
+  const prevPlayingRef = useRef<boolean>(false);
+
+  // Invalidate library queries instantly when playback stops/exits
+  useEffect(() => {
+    if (prevPlayingRef.current && !status?.playing) {
+      queryClient.invalidateQueries({ queryKey: ['home'] });
+      queryClient.invalidateQueries({ queryKey: ['continue-watching'] });
+      queryClient.invalidateQueries({ queryKey: ['library'] });
+    }
+    prevPlayingRef.current = !!status?.playing;
+  }, [status?.playing, queryClient]);
 
   // Poll playback status every 1.5 seconds to track VLC
   useEffect(() => {
@@ -140,11 +152,13 @@ export const PlayerOverlay: React.FC = () => {
     if (!nextEpisode?.file_path) return;
     setCountdown(null);
     try {
+      const { activeProfile } = useProfileStore.getState();
       await playbackApi.play({
         file_path: nextEpisode.file_path,
         position: 0,
         media_type: 'episode',
         media_id: nextEpisode.id,
+        profile_id: activeProfile?.id,
       });
       queryClient.invalidateQueries({ queryKey: ['home'] });
       queryClient.invalidateQueries({ queryKey: ['continue-watching'] });

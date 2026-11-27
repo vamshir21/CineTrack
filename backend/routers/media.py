@@ -51,7 +51,10 @@ def _require_admin(x_profile_id: Optional[int], db: Session):
 def _get_progress(db: Session, media_type: str, media_id: int, profile_id: Optional[int] = None) -> dict:
     q = db.query(WatchHistory).filter(WatchHistory.media_type == media_type, WatchHistory.media_id == media_id)
     if profile_id:
-        q = q.filter(WatchHistory.profile_id == profile_id)
+        q = q.filter((WatchHistory.profile_id == profile_id) | (WatchHistory.profile_id == None))
+        q = q.order_by((WatchHistory.profile_id == profile_id).desc(), WatchHistory.watched_at.desc())
+    else:
+        q = q.order_by(WatchHistory.watched_at.desc())
     record = q.first()
     if not record:
         return {"position": 0.0, "duration": 0.0, "completed": False, "percentage": 0.0}
@@ -75,8 +78,11 @@ def _series_progress(db: Session, series_id: int, profile_id: Optional[int] = No
 
     q = db.query(WatchHistory).filter(WatchHistory.media_type == "episode", WatchHistory.media_id.in_(ep_ids))
     if profile_id:
-        q = q.filter(WatchHistory.profile_id == profile_id)
-    record = q.order_by(WatchHistory.watched_at.desc()).first()
+        q = q.filter((WatchHistory.profile_id == profile_id) | (WatchHistory.profile_id == None))
+        q = q.order_by((WatchHistory.profile_id == profile_id).desc(), WatchHistory.watched_at.desc())
+    else:
+        q = q.order_by(WatchHistory.watched_at.desc())
+    record = q.first()
     if not record:
         return {"position": 0.0, "duration": 0.0, "completed": False, "percentage": 0.0}
     pct = 0.0
@@ -191,7 +197,7 @@ def _series_out(series: TVSeries, db: Session, include_seasons: bool = False, pr
             WatchHistory.completed == True,
         )
         if profile_id:
-            q = q.filter(WatchHistory.profile_id == profile_id)
+            q = q.filter((WatchHistory.profile_id == profile_id) | (WatchHistory.profile_id == None))
         is_series_watched = q.count() >= len(ep_ids)
 
     out = {
@@ -543,7 +549,7 @@ def _get_continue_watching_items(db: Session, limit: int = 20, profile_id: Optio
     """
     q = db.query(WatchHistory)
     if profile_id:
-        q = q.filter(WatchHistory.profile_id == profile_id)
+        q = q.filter((WatchHistory.profile_id == profile_id) | (WatchHistory.profile_id == None))
     all_history = q.order_by(WatchHistory.watched_at.desc()).all()
 
     items = []
@@ -596,7 +602,7 @@ def _get_continue_watching_items(db: Session, limit: int = 20, profile_id: Optio
                 WatchHistory.completed == False,
             )
             if profile_id:
-                in_prog_q = in_prog_q.filter(WatchHistory.profile_id == profile_id)
+                in_prog_q = in_prog_q.filter((WatchHistory.profile_id == profile_id) | (WatchHistory.profile_id == None))
             in_prog_hist = in_prog_q.order_by(WatchHistory.watched_at.desc()).first()
 
             if in_prog_hist:
@@ -613,7 +619,7 @@ def _get_continue_watching_items(db: Session, limit: int = 20, profile_id: Optio
                 WatchHistory.media_id.in_(series_ep_ids),
             )
             if profile_id:
-                last_hist_q = last_hist_q.filter(WatchHistory.profile_id == profile_id)
+                last_hist_q = last_hist_q.filter((WatchHistory.profile_id == profile_id) | (WatchHistory.profile_id == None))
             last_hist = last_hist_q.order_by(WatchHistory.watched_at.desc()).first()
 
             if last_hist:

@@ -1,22 +1,40 @@
 """
 Playback router.
 """
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, Header
 import asyncio
+from typing import Optional
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
+from backend.database import get_db
+from backend.models import WatchHistory, Episode, TVSeries, Movie, Profile
 from backend.schemas import PlayRequest, SeekRequest, VolumeRequest, SpeedRequest, SubtitleSelectRequest
 from backend.services.playback_service import playback_service
 
 router = APIRouter(prefix="/api/playback", tags=["playback"])
 
 
+def _resolve_profile_id(x_profile_id: Optional[int], db: Session) -> int:
+    if x_profile_id:
+        return x_profile_id
+    p = db.query(Profile).filter(Profile.is_admin == True).order_by(Profile.id.asc()).first()
+    return p.id if p else 1
+
+
 @router.post("/play")
-def play(body: PlayRequest):
+def play(
+    body: PlayRequest,
+    x_profile_id: Optional[int] = Header(None, alias="X-Profile-ID"),
+    db: Session = Depends(get_db),
+):
+    profile_id = body.profile_id or _resolve_profile_id(x_profile_id, db)
     playback_service.play(
         file_path=body.file_path,
         position=body.position,
         media_type=body.media_type,
         media_id=body.media_id,
+        profile_id=profile_id,
     )
     return playback_service.get_status()
 
@@ -83,22 +101,9 @@ def select_subtitle(body: SubtitleSelectRequest):
     return {"selected": body.track_id}
 
 
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from fastapi import Depends, HTTPException, Header
-from typing import Optional
-from backend.database import get_db
-from backend.models import WatchHistory, Episode, TVSeries, Movie, Profile
-
 class RemoveContinueRequest(BaseModel):
     media_type: str
     media_id: int
-
-def _resolve_profile_id(x_profile_id: Optional[int], db: Session) -> int:
-    if x_profile_id:
-        return x_profile_id
-    p = db.query(Profile).filter(Profile.is_admin == True).order_by(Profile.id.asc()).first()
-    return p.id if p else 1
 
 def _do_remove_continue_watching(db: Session, media_type: str, media_id: int, profile_id: int) -> int:
     deleted = 0

@@ -30,6 +30,7 @@ class PlaybackService:
 
     def __init__(self):
         self._lock = threading.Lock()
+        self._rc_lock = threading.Lock()
         self._vlc_process: Optional[subprocess.Popen] = None
         self._rc_socket: Optional[socket.socket] = None
         self._rc_port: Optional[int] = None
@@ -53,6 +54,7 @@ class PlaybackService:
             "subtitle_tracks": [],
             "completed": False,
             "completed_episode_id": None,
+            "profile_id": None,
         }
         self._ws_clients: set = set()
 
@@ -93,44 +95,79 @@ class PlaybackService:
 
     # ── Database Persistence ───────────────────────────────────────────────────
 
-    def _persist_progress(self, media_type: str, media_id: int, position: float, duration: float):
+    def _persist_progress(
+        self,
+        media_type: str,
+        media_id: int,
+        position: float,
+        duration: float,
+        profile_id: Optional[int] = None,
+        completed: Optional[bool] = None,
+    ):
         if not media_type or not media_id or position <= 0:
+            logger.warning(
+                f"Skipping progress save: media_type={media_type}, media_id={media_id}, pos={position}"
+            )
             return
 
         from datetime import datetime, timezone
         from backend.database import SessionLocal
-        from backend.models import WatchHistory, Movie, Episode
+        from backend.models import WatchHistory, Movie, Episode, Profile
 
         db = SessionLocal()
         try:
             # Self-healing verification: ensure media_type matches actual entity
+            movie_obj = None
+            ep_obj = None
             if media_type == "movie":
-                m = db.query(Movie).filter(Movie.id == media_id).first()
-                if not m:
-                    ep = db.query(Episode).filter(Episode.id == media_id).first()
-                    if ep:
+                movie_obj = db.query(Movie).filter(Movie.id == media_id).first()
+                if not movie_obj:
+                    ep_obj = db.query(Episode).filter(Episode.id == media_id).first()
+                    if ep_obj:
                         media_type = "episode"
             elif media_type == "episode":
-                ep = db.query(Episode).filter(Episode.id == media_id).first()
-                if not ep:
-                    m = db.query(Movie).filter(Movie.id == media_id).first()
-                    if m:
+                ep_obj = db.query(Episode).filter(Episode.id == media_id).first()
+                if not ep_obj:
+                    movie_obj = db.query(Movie).filter(Movie.id == media_id).first()
+                    if movie_obj:
                         media_type = "movie"
 
-            # Completion criteria: mark complete if watched >= 93% OR within credit buffer of end
+            # Fallback duration from metadata if duration was not reported by VLC yet
+            if duration <= 0:
+                if media_type == "movie":
+                    m = movie_obj or db.query(Movie).filter(Movie.id == media_id).first()
+                    if m and m.runtime and m.runtime > 0:
+                        duration = float(m.runtime * 60)
+                elif media_type == "episode":
+                    ep = ep_obj or db.query(Episode).filter(Episode.id == media_id).first()
+                    if ep and ep.runtime and ep.runtime > 0:
+                        duration = float(ep.runtime * 60)
+
+            # Completion criteria: mark complete if watched >= 92% OR within credit buffer of end
             threshold_minutes = self._get_completion_threshold()
             threshold_seconds = max(30.0, threshold_minutes * 60.0)
-            completed = False
-            if duration > 30 and position > 0:
-                if (position / duration) >= 0.93 or (duration - position) <= threshold_seconds:
-                    completed = True
+            if completed is None:
+                completed = False
+                if duration > 30 and position > 0:
+                    if (position / duration) >= 0.92 or (duration - position) <= threshold_seconds:
+                        completed = True
 
-            record = (
-                db.query(WatchHistory)
-                .filter(WatchHistory.media_type == media_type, WatchHistory.media_id == media_id)
-                .first()
+            # Resolve default admin profile if profile_id not provided
+            if not profile_id:
+                p = db.query(Profile).filter(Profile.is_admin == True).order_by(Profile.id.asc()).first()
+                profile_id = p.id if p else 1
+
+            q = db.query(WatchHistory).filter(
+                WatchHistory.media_type == media_type,
+                WatchHistory.media_id == media_id,
             )
+            if profile_id:
+                q = q.filter((WatchHistory.profile_id == profile_id) | (WatchHistory.profile_id == None))
+            record = q.order_by(WatchHistory.watched_at.desc()).first()
+
             if record:
+                if profile_id:
+                    record.profile_id = profile_id
                 record.position_seconds = position
                 if duration > 0:
                     record.duration_seconds = duration
@@ -138,6 +175,7 @@ class PlaybackService:
                 record.watched_at = datetime.now(timezone.utc)
             else:
                 record = WatchHistory(
+                    profile_id=profile_id,
                     media_type=media_type,
                     media_id=media_id,
                     position_seconds=position,
@@ -147,7 +185,10 @@ class PlaybackService:
                 )
                 db.add(record)
             db.commit()
-            logger.info(f"Persisted watch progress: {media_type} {media_id} -> {position:.1f}s / {duration:.1f}s (completed={completed})")
+            logger.info(
+                f"Persisted watch progress: profile={profile_id} {media_type} {media_id} -> "
+                f"{position:.1f}s / {duration:.1f}s (completed={completed})"
+            )
         except Exception as e:
             logger.warning(f"Failed to persist watch progress: {e}")
         finally:
@@ -158,26 +199,45 @@ class PlaybackService:
     def _send_rc_cmd(self, sock: socket.socket, cmd: str) -> str:
         if not sock:
             return ""
-        try:
-            sock.sendall(f"{cmd}\n".encode("utf-8"))
-            time.sleep(0.1)
-            sock.settimeout(0.6)
-            resp = b""
-            while True:
+        with self._rc_lock:
+            try:
+                # Flush any stale bytes before sending
+                sock.setblocking(False)
                 try:
-                    chunk = sock.recv(1024)
-                    if not chunk:
-                        break
-                    resp += chunk
-                    if b"> " in chunk or b"\n" in chunk:
-                        break
-                except socket.timeout:
-                    break
-            return resp.decode("utf-8", errors="ignore").strip()
-        except Exception:
-            return ""
+                    while sock.recv(4096):
+                        pass
+                except BlockingIOError:
+                    pass
+                finally:
+                    sock.setblocking(True)
 
-    def _rc_monitor_loop(self, proc: subprocess.Popen, port: int, media_type: str, media_id: int, initial_pos: float):
+                sock.sendall(f"{cmd}\n".encode("utf-8"))
+                sock.settimeout(0.5)
+                resp = b""
+                while True:
+                    try:
+                        chunk = sock.recv(4096)
+                        if not chunk:
+                            break
+                        resp += chunk
+                        if resp.endswith(b"> "):
+                            break
+                    except socket.timeout:
+                        break
+                return resp.decode("utf-8", errors="ignore").strip()
+            except Exception as e:
+                logger.debug(f"RC command '{cmd}' failed: {e}")
+                return ""
+
+    def _rc_monitor_loop(
+        self,
+        proc: subprocess.Popen,
+        port: int,
+        media_type: str,
+        media_id: int,
+        initial_pos: float,
+        profile_id: Optional[int] = None,
+    ):
         """Background thread that tracks VLC playback and updates WatchHistory."""
         # Wait up to 6 seconds for VLC RC socket to become ready
         sock = None
@@ -200,14 +260,15 @@ class PlaybackService:
         with self._lock:
             self._rc_socket = sock
 
-        # Drain initial welcome banner from socket
-        time.sleep(0.3)
+        # Drain initial welcome banner from socket completely until prompt '> '
+        sock.settimeout(2.0)
+        banner = b""
         try:
-            sock.settimeout(0.3)
-            while True:
-                chunk = sock.recv(2048)
+            while not banner.endswith(b"> "):
+                chunk = sock.recv(1024)
                 if not chunk:
                     break
+                banner += chunk
         except Exception:
             pass
 
@@ -228,22 +289,12 @@ class PlaybackService:
         except Exception:
             save_interval = 3.0
 
-        max_pos = initial_pos
+        cur_pos = initial_pos
         cur_dur = 0.0
         last_saved_time = 0.0
 
         try:
             while not self._stop_event.is_set() and proc.poll() is None:
-                # Query current time
-                time_resp = self._send_rc_cmd(sock, "get_time")
-                pos_matches = re.findall(r"\b\d+\b", time_resp)
-                if pos_matches:
-                    pos = float(pos_matches[-1])
-                    if pos > 0:
-                        max_pos = max(max_pos, pos)
-                        with self._lock:
-                            self._state["position"] = max_pos
-
                 # Query total length
                 dur_resp = self._send_rc_cmd(sock, "get_length")
                 dur_matches = re.findall(r"\b\d+\b", dur_resp)
@@ -253,6 +304,19 @@ class PlaybackService:
                         cur_dur = dur
                         with self._lock:
                             self._state["duration"] = cur_dur
+
+                # Query current time
+                time_resp = self._send_rc_cmd(sock, "get_time")
+                pos_matches = re.findall(r"\b\d+\b", time_resp)
+                if pos_matches:
+                    pos = float(pos_matches[-1])
+                    if cur_dur > 0 and pos > (cur_dur + 10):
+                        # Obvious bogus or desynced length response; ignore
+                        pass
+                    elif pos >= 0:
+                        cur_pos = pos
+                        with self._lock:
+                            self._state["position"] = cur_pos
 
                 # Query status
                 status_resp = self._send_rc_cmd(sock, "status")
@@ -265,8 +329,8 @@ class PlaybackService:
                         self._state["paused"] = is_paused
 
                 # Periodically save progress to SQLite based on configured interval
-                if max_pos > 0 and (time.time() - last_saved_time) >= save_interval:
-                    self._persist_progress(media_type, media_id, max_pos, cur_dur)
+                if cur_pos > 0 and (time.time() - last_saved_time) >= save_interval:
+                    self._persist_progress(media_type, media_id, cur_pos, cur_dur, profile_id)
                     last_saved_time = time.time()
 
                 time.sleep(1.0)
@@ -279,8 +343,15 @@ class PlaybackService:
                 self._state["playing"] = False
                 self._state["paused"] = False
 
-            if max_pos > 0:
-                self._persist_progress(media_type, media_id, max_pos, cur_dur)
+            # Calculate whether playback was completed
+            threshold_minutes = self._get_completion_threshold()
+            threshold_seconds = max(30.0, threshold_minutes * 60.0)
+            is_completed = (cur_dur > 30.0 and cur_pos > 0.0) and (
+                (cur_pos / cur_dur) >= 0.92 or (cur_dur - cur_pos) <= threshold_seconds
+            )
+
+            if cur_pos > 0:
+                self._persist_progress(media_type, media_id, cur_pos, cur_dur, profile_id, completed=is_completed)
 
             try:
                 sock.close()
@@ -289,13 +360,6 @@ class PlaybackService:
             with self._lock:
                 if self._rc_socket == sock:
                     self._rc_socket = None
-
-            # Calculate whether playback was completed
-            threshold_minutes = self._get_completion_threshold()
-            threshold_seconds = max(30.0, threshold_minutes * 60.0)
-            is_completed = (cur_dur > 30.0 and max_pos > 0.0) and (
-                (max_pos / cur_dur) >= 0.93 or (cur_dur - max_pos) <= threshold_seconds
-            )
 
             with self._lock:
                 self._state["playing"] = False
@@ -308,7 +372,14 @@ class PlaybackService:
 
     # ── Public API ─────────────────────────────────────────────────────────────
 
-    def play(self, file_path: str, position: float = 0.0, media_type: str = "movie", media_id: int = 0):
+    def play(
+        self,
+        file_path: str,
+        position: float = 0.0,
+        media_type: str = "movie",
+        media_id: int = 0,
+        profile_id: Optional[int] = None,
+    ):
         """Play media in native VLC application, enabling all built-in playback controls."""
         self.stop()
         self._stop_event.clear()
@@ -320,9 +391,13 @@ class PlaybackService:
 
         # Database lookup to ensure 100% accurate media_type and media_id
         from backend.database import SessionLocal
-        from backend.models import Movie, Episode
+        from backend.models import Movie, Episode, Profile
         db = SessionLocal()
         try:
+            if not profile_id:
+                p = db.query(Profile).filter(Profile.is_admin == True).order_by(Profile.id.asc()).first()
+                profile_id = p.id if p else 1
+
             if file_path:
                 ep_by_path = db.query(Episode).filter(Episode.file_path == file_path).first()
                 if ep_by_path:
@@ -357,6 +432,7 @@ class PlaybackService:
                 "speed": 1.0,
                 "completed": False,
                 "completed_episode_id": None,
+                "profile_id": profile_id,
             })
 
         if VLC_BIN:
@@ -364,6 +440,7 @@ class PlaybackService:
             self._rc_port = port
             cmd = [
                 VLC_BIN,
+                "--no-one-instance",
                 f"--rc-host=127.0.0.1:{port}",
                 "--extraintf=rc",
                 f"--start-time={int(position)}",
@@ -384,10 +461,13 @@ class PlaybackService:
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
-                logger.info(f"Launched native VLC (PID: {self._vlc_process.pid}) for {media_type} {media_id} on port {port}")
+                logger.info(
+                    f"Launched native VLC (PID: {self._vlc_process.pid}) "
+                    f"for profile {profile_id} {media_type} {media_id} on port {port}"
+                )
                 self._monitor_thread = threading.Thread(
                     target=self._rc_monitor_loop,
-                    args=(self._vlc_process, port, media_type, media_id, position),
+                    args=(self._vlc_process, port, media_type, media_id, position, profile_id),
                     daemon=True,
                 )
                 self._monitor_thread.start()
@@ -402,7 +482,9 @@ class PlaybackService:
                 self._libvlc_player.set_media(media)
                 self._libvlc_player.play()
                 if position > 0:
-                    threading.Thread(target=self._delayed_libvlc_seek, args=(position,), daemon=True).start()
+                    threading.Thread(
+                        target=self._delayed_libvlc_seek, args=(position,), daemon=True
+                    ).start()
             except Exception as e:
                 logger.error(f"Fallback libVLC error: {e}")
 
